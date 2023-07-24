@@ -1,0 +1,1 @@
+DicomWeb is a web-based application to manage some common DICOM operations in a radiology department or medical imaging facility. Its main utility is the "check storage" tool, that allows the user to verify if the studies/series existent in a modality or workstation have been correctly archived in the institutional PACS.
