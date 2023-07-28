@@ -1,10 +1,12 @@
-from app_pkg import application
-from flask import render_template, request
 import json, ipaddress
-from app_pkg.aux_funcs import read_dataset, find_imgs_in_field
 from datetime import datetime, timedelta
 from pydicom.multival import MultiValue
+
+from flask import render_template, request
+from app_pkg import application
+from app_pkg.aux_funcs import read_dataset, find_imgs_in_field
 from app_pkg.dicom_interface import DicomInterface
+from app_pkg.db_models import Patient, Study, Series, Instance
 
 @application.route('/')
 @application.route('/index')
@@ -60,6 +62,29 @@ def search_studies():
     ae = DicomInterface(ae_title = 'BECARIOSPANCHO')    
     responses = ae.query_studies_in_device(device, qr, rs)
     ae.release_connections()
+
+    # Extract data from datasets
+    full_data = []
+    for study in responses:
+
+        data = read_dataset(study, ['PatientName','PatientID','StudyDate','StudyTime','ModalitiesInStudy','StudyDescription',device['imgs_study'],'StudyInstanceUID'],
+                             field_names = {device['imgs_study']:'ImgsStudy'},
+                             fields_handlers = {'PatientName': lambda x: str(x.value),
+                                                'ModalitiesInStudy': lambda x: '/'.join(x.value) if type(x.value) == MultiValue else x.value})  
+        
+        data['source'] = request.json['device']
+        data['level'] = 'STUDY'
+        full_data.append(data)    
+    data = {
+        "data": full_data
+    }
+    
+    return 
+
+@application.route('/get_local_studies', methods = ['GET','POST'])
+def get_local_studies():
+
+    studies = Study.query.all()
 
     # Extract data from datasets
     full_data = []
