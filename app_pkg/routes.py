@@ -4,7 +4,7 @@ import json, ipaddress
 from app_pkg.aux_funcs import read_dataset, find_imgs_in_field
 from datetime import datetime, timedelta
 from pydicom.multival import MultiValue
-from app_pkg.dicom.dicom_interface import DicomInterface
+from app_pkg.dicom_interface import DicomInterface
 
 @application.route('/')
 @application.route('/index')

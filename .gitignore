@@ -3,3 +3,4 @@ envDicomWeb
 config
 .DS_Store
 app.db
+incoming

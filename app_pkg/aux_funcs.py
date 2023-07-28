@@ -1,9 +1,7 @@
 from pydicom.dataset import Dataset
-from typing import List, Union, Callable
+from typing import List
 from datetime import datetime, timedelta
-import json
-from app_pkg.dicom.dicom_interface import DicomInterface
-from pynetdicom import debug_logger
+from app_pkg.dicom_interface import DicomInterface
 from pynetdicom.sop_class import StudyRootQueryRetrieveInformationModelFind
 
 def read_dataset(ds:Dataset, fields_to_read:List[str], field_names:dict = {}, default_value = None,

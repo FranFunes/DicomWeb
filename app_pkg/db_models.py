@@ -7,7 +7,7 @@ class Patient(db.Model):
     # Cross-references down
     studies = db.relationship('Study', backref='patient', lazy='dynamic')    
     series = db.relationship('Series', backref='patient', lazy='dynamic')    
-    instances = db.relationship('Instances', backref='patient', lazy='dynamic')    
+    instances = db.relationship('Instance', backref='patient', lazy='dynamic')    
     
     def __repr__(self):
         return f'<Patient {self.PatientName}>'
@@ -24,7 +24,7 @@ class Study(db.Model):
 
     # Cross-references down
     series = db.relationship('Series', backref='study', lazy='dynamic')    
-    instances = db.relationship('Instances', backref='study', lazy='dynamic')     
+    instances = db.relationship('Instance', backref='study', lazy='dynamic')     
 
     def __repr__(self):
         return f'<Study {self.StudyDescription} from {self.PatientID}>'
@@ -41,7 +41,7 @@ class Series(db.Model):
     StudyInstanceUID = db.Column(db.String(64), db.ForeignKey('study.StudyInstanceUID'))
 
     # Cross-references down
-    instances = db.relationship('Instances', backref='series', lazy='dynamic')     
+    instances = db.relationship('Instance', backref='series', lazy='dynamic')     
 
     def __repr__(self):
         return f'<Series {self.SeriesDescription} from {self.PatientID}>'    
@@ -49,7 +49,7 @@ class Series(db.Model):
 class Instance(db.Model):
 
     SOPInstanceUID = db.Column(db.String(64), primary_key=True)
-    SOPClassUID = db.Column(db.String(64), primary_key=True)   
+    SOPClassUID = db.Column(db.String(64), index=True)   
     filename = db.Column(db.String(256), index=True)
 
     # Cross-references up
