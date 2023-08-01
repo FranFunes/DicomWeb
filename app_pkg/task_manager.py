@@ -4,7 +4,7 @@ from datetime import datetime
 from time import sleep
 import threading, json
 from queue import Queue
-from app_pkg.dicom.dicom_interface import DicomInterface
+from app_pkg.dicom_interface import DicomInterface
 from pydicom.dataset import Dataset
 from pynetdicom.sop_class import StudyRootQueryRetrieveInformationModelMove
 

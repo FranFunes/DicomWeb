@@ -9,4 +9,7 @@ application.config.from_object(Config)
 application.task_manager = TaskManager()
 application.check_storage_manager = CheckStorageManager()
 
-from app_pkg import routes
+db = SQLAlchemy(application)
+migrate = Migrate(application, db)
+
+from app_pkg import routes, db_models

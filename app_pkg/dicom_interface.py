@@ -142,8 +142,6 @@ class DicomInterface(AE):
             · store_handler: an appropiate handler for a C-STORE request (see pynetdicom documentation for
             more hints on how to write an appropiate handler). If not specified, the default handler defined
             above will be used.
-                
-
         
         """
         # Get ae_title to initalize class
@@ -182,7 +180,7 @@ class DicomInterface(AE):
         self.server = self.start_server((self.address, self.port), evt_handlers=handlers, block = False)
         self.store_scp_active = True
         # Show message       
-        app_logger.debug('Starting store SCP listener ' + self.ae_title.strip() + '@' + self.address + ':' + str(self.port))
+        app_logger.info('Starting store SCP listener ' + self.ae_title.strip() + '@' + self.address + ':' + str(self.port))
 
     def stop_store_scp(self) -> None:
         
