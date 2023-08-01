@@ -15,9 +15,8 @@ class Patient(db.Model):
 class Study(db.Model):
 
     StudyInstanceUID = db.Column(db.String(64), primary_key=True)
-    StudyDate = db.Column(db.DateTime, index=True)
+    StudyDate = db.Column(db.DateTime, index=True)    
     StudyDescription = db.Column(db.String(64), index=True)
-    ModalitiesInStudy = db.Column(db.String(64), index=True)
 
     # Cross-references up
     PatientID = db.Column(db.String(64), db.ForeignKey('patient.PatientID'))
@@ -34,6 +33,7 @@ class Series(db.Model):
     SeriesInstanceUID = db.Column(db.String(64), primary_key=True)
     SeriesDate = db.Column(db.DateTime, index=True)
     SeriesDescription = db.Column(db.String(64), index=True)
+    SeriesNumber = db.Column(db.Integer())
     Modality = db.Column(db.String(64), index=True)
 
     # Cross-references up

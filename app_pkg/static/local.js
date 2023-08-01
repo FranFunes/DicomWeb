@@ -80,6 +80,7 @@ function initStudiesTable() {
             items.push($(element.closest('table')).DataTable().row(element).data())                        
         }
         ajax_data.items = items
+        console.log(ajax_data)
         $.ajax({
             url: "/move",
             method: "POST",
@@ -108,15 +109,14 @@ function initDestinations() {
         contentType: "application/json",
         success: function(response) {
             
-            // Show success message
-            console.log(response)
-            /*
-            var selectValues = $('#devices').DataTable().column(0).data()
+            // Show success message            
+            var selectValues = response.data
             $.each(selectValues, function(key, value) {
+                var name = value.name
                 $('#destinations')
-                     .append($('<option>', { value : value })
-                     .text(value));
-                });*/
+                     .append($('<option>', { name : name })
+                     .text(name));
+                });
             
         },
         error: function(xhr, status, error) {
@@ -134,7 +134,7 @@ function showStudy(row) {
             </table>`).show();
     var childTable = $(jq("child_" + row.data().StudyInstanceUID)).DataTable({
         ajax: {
-        url: "/get_study_data",
+        url: "/get_local_study_data",
         method: "POST",
         data: function() { return JSON.stringify(row.data()) },
         contentType: 'application/json',

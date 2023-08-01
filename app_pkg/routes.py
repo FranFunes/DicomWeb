@@ -81,6 +81,10 @@ def search_studies():
     
     return 
 
+@application.route('/local')
+def local():
+    return render_template('local.html')
+                           
 @application.route('/get_local_studies', methods = ['GET','POST'])
 def get_local_studies():
 
@@ -88,16 +92,48 @@ def get_local_studies():
 
     # Extract data from datasets
     full_data = []
-    for study in responses:
-
-        data = read_dataset(study, ['PatientName','PatientID','StudyDate','StudyTime','ModalitiesInStudy','StudyDescription',device['imgs_study'],'StudyInstanceUID'],
-                             field_names = {device['imgs_study']:'ImgsStudy'},
-                             fields_handlers = {'PatientName': lambda x: str(x.value),
-                                                'ModalitiesInStudy': lambda x: '/'.join(x.value) if type(x.value) == MultiValue else x.value})  
-        
-        data['source'] = request.json['device']
+    for study in Study.query.all():
+        data = {}
+        data['PatientName'] = study.patient.PatientName
+        data['PatientID'] = study.patient.PatientID
+        data['StudyDate'] = study.StudyDate.strftime('%d/%m/%y')
+        data['StudyTime'] = study.StudyDate.strftime('%H:%M:%S')
+        data['ModalitiesInStudy'] = '/'.join(set([ss.Modality for ss in study.series.all()]))
+        data['StudyDescription'] = study.StudyDescription
+        data['ImgsStudy'] = len(study.instances.all())
+        data['StudyInstanceUID'] = study.StudyInstanceUID        
+        data['source'] = 'local'
         data['level'] = 'STUDY'
         full_data.append(data)    
+
+    data = {
+        "data": full_data
+    }
+    
+    return data
+
+@application.route('/get_local_study_data', methods=['GET', 'POST'])
+def get_local_study_data():
+    
+    study = Study.query.get(request.json['StudyInstanceUID'])
+
+    full_data = []
+    for series in study.series.all():
+        data = {
+            'SeriesNumber': series.SeriesNumber,
+            'SeriesDate': series.SeriesDate.strftime('%d/%m/%y'),
+            'SeriesTime': series.SeriesDate.strftime('%H:%M:%S'),
+            'Modality': series.Modality,
+            'SeriesDescription': series.SeriesDescription,
+            'ImgsSeries': len(series.instances.all()),
+            'SeriesInstanceUID': series.SeriesInstanceUID,
+        }           
+            
+        # Add study data
+        data.update(request.json)         
+        data['level'] = 'SERIES'
+        full_data.append(data)
+    
     data = {
         "data": full_data
     }

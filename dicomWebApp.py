@@ -30,9 +30,8 @@ def db_create_patient(ds: Dataset) -> Patient:
 def db_create_study(ds: Dataset) -> Study:
 
     uid = ds.StudyInstanceUID
-    date = datetime.strptime(ds.StudyDate, '%Y%m%d')
+    date = datetime.strptime(ds.StudyDate + ds.StudyTime[:6], '%Y%m%d%H%M%S')
     description = ds.StudyDescription
-    modalities = ds.Modality
     with application.app_context():
         # Raise error if study already exists
         study = Study.query.get(uid)
@@ -43,7 +42,6 @@ def db_create_study(ds: Dataset) -> Study:
         study = Study(StudyInstanceUID = uid, 
                       StudyDate = date,
                       StudyDescription = description, 
-                      ModalitiesInStudy = modalities, 
                       patient = patient)
         db.session.add(study)
         db.session.commit()
@@ -53,9 +51,10 @@ def db_create_study(ds: Dataset) -> Study:
 def db_create_series(ds: Dataset) -> Series:
 
     uid = ds.SeriesInstanceUID
-    date = datetime.strptime(ds.SeriesDate, '%Y%m%d')
+    date = datetime.strptime(ds.SeriesDate + ds.SeriesTime[:6], '%Y%m%d%H%M%S')
     description = ds.SeriesDescription
     mod = ds.Modality
+    number = ds.SeriesNumber
     with application.app_context():
         # Raise error if series already exists
         series = Series.query.get(uid)
@@ -67,6 +66,7 @@ def db_create_series(ds: Dataset) -> Series:
         series = Series(SeriesInstanceUID = uid, 
                         SeriesDate = date,
                         SeriesDescription = description, 
+                        SeriesNumber = number,
                         Modality = mod, 
                         patient = patient,
                         study = study)
