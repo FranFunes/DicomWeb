@@ -2,9 +2,11 @@ import pandas as pd
 from numpy import argmax
 from datetime import datetime
 from time import sleep
-import threading, json
+import threading, json, os
 from queue import Queue
+from app_pkg import application
 from app_pkg.dicom_interface import DicomInterface
+from app_pkg.db_models import Device
 from pydicom.dataset import Dataset
 from pynetdicom.sop_class import StudyRootQueryRetrieveInformationModelMove
 
@@ -42,7 +44,7 @@ class DeviceTasksHandler():
         self.task_modifiers = Queue()
 
         # Initialize DICOM interface
-        self.ae = DicomInterface(ae_title = 'BECARIOSPANCHO')
+        self.ae = DicomInterface(ae_title = os.environ['STORE_SCP_AET'])
         
         # Initialize the current task id to None
         self.current_task_id = None
@@ -226,16 +228,18 @@ class DeviceTasksHandler():
 
         if task_data['type'] == 'MOVE':
             
-            # Get source and destination ae_title
-            with open("config/devices.json", "r") as jsonfile:         
-                devices = json.load(jsonfile)    
-            destination = task_data['destination']
+            # Get source from database      
+            with application.app_context():
+                device = Device.query.get(task_data['source'])
+            assert device
             source = devices[task_data['source']]
+            destination = task_data['destination']
 
             # Get the number of imgs to move
             imgs = task_data['ImgsStudy'] if task_data['level'] == 'STUDY' else task_data['ImgsSeries']
 
             # Create a new DICOM association to perform the C-MOVE
+            source = {attr:getattr(source, attr) for attr in ["ae_title","port","address"]}
             association = self.ae.get_association(source)# associate(source['address'], source['port'], ae_title = source['ae_title'])
             self.tasks_list[task_id]['association'] = association
 
@@ -374,11 +378,12 @@ class CheckStorageManager():
 
     def find_missing_series(self, device_name, studydate):
 
-        # Get device info from configuration
-        with open("config/devices.json", "r") as jsonfile:         
-            devices = json.load(jsonfile)    
-        device = devices[device_name]
-        pacs = devices["PACS"]
+        with application.app_context():
+            device = Device.query.get(device_name)
+            pacs = Device.query.get('PACS')
+        assert device  
+        device = {attr:getattr(device, attr) for attr in ["ae_title","port","address"]}
+        pacs = {attr:getattr(pacs, attr) for attr in ["ae_title","port","address"]}
 
         # Build the data for the dicom query
         qr = {'StudyDate':  studydate}        
@@ -389,7 +394,7 @@ class CheckStorageManager():
             device['imgs_study']: ''}
         
         # Start a DICOM AE to perform C-FIND operations on the device
-        ae = DicomInterface(ae_title = 'BECARIOSPANCHO')          
+        ae = DicomInterface(ae_title = os.environ['STORE_SCP_AET'])          
 
         # Query studies and series in the target device
         self.status = 'Buscando estudios en el dispositivo...'
@@ -431,7 +436,7 @@ class CheckStorageManager():
         series_in_device = list(filter(lambda x: self.series_filter(x, device_name), series_in_device))
 
         # PACS connection
-        ae_pacs = DicomInterface(ae_title = 'BECARIOSPANCHO')
+        ae_pacs = DicomInterface(ae_title = os.environ['STORE_SCP_AET'])
         
         # Check if each series exists in PACS with the same number of images
         self.status = 'Buscando series en el PACS...' 
@@ -463,14 +468,16 @@ class CheckStorageManager():
     
     def series_filter(self, ds, device_name):
             
-        # Get filtering criteria from configuration file
-        with open("config/series_filters.json", "r") as jsonfile:         
-            filters = json.load(jsonfile)[device_name]
-
-        for key, values_to_discard in filters.items():
+        # Get filtering criteria from database
+        with application.app_context():
+            device = Device.query.get(device_name)
+            assert device
+        filters = device.filters.all()
+        
+        for f in filters:
             try:
-                field_value = getattr(ds, key)
-                if field_value in values_to_discard:
+                value = getattr(ds, field)
+                if value == f.value:
                     return False                
             except:
                 pass
@@ -493,8 +500,6 @@ class CheckStorageManager():
                 pass
 
         return True
-                
 
-
-
-        
+application.task_manager = TaskManager()
+application.check_storage_manager = CheckStorageManager()

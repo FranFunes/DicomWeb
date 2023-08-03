@@ -252,8 +252,7 @@ class DicomInterface(AE):
 
     def query_device(self, device: dict, search_criteria: Union[dict, Dataset]) ->  List[Dataset]:
 
-        """
-        
+        """        
             Query a device with custom search_criteria
 
         """

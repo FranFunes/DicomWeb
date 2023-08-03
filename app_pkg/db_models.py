@@ -60,3 +60,32 @@ class Instance(db.Model):
     def __repr__(self):
         return f'<Instance {self.SOPClassUID} from {self.PatientID} stored at {self.filename}>'
     
+class Device(db.Model):
+
+    name = db.Column(db.String(64), primary_key=True)
+    ae_title = db.Column(db.String(64), index=True)
+    address = db.Column(db.String(16), index=True)
+    port = db.Column(db.Integer(), index=True)
+    imgs_series = db.Column(db.String(64))
+    imgs_study = db.Column(db.String(64))
+
+    # Cross-references down
+    filters = db.relationship('Filter', backref='device', lazy='dynamic')  
+
+    def __repr__(self):
+        return f'<Device {self.name}: {self.ae_title}@{self.address}>'
+
+class Filter(db.Model):
+
+    id = db.Column(db.Integer(), primary_key=True)
+    field = db.Column(db.String(64), index=True)
+    value = db.Column(db.String(64), index=True)
+
+    # Cross-references up
+    device_name = db.Column(db.String(64), db.ForeignKey('device.name'))
+
+    def __repr__(self):
+        return f'<Filter {self.field}: {self.value} for device {self.device_name}>'
+    
+
+

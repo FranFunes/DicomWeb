@@ -11,23 +11,7 @@ $(document).ready(function () {
         searching: false,
         paging: false,
         ordering: false,
-        info: false,
-        initComplete: function() {
-
-            initDestinations()
-
-            // Delete PACS entry
-            devices_table.column(0).search('PACS').row().remove().draw()
-
-            // Select last selected device
-            if (localStorage.getItem('storageDevice') !== null) {
-                devices_table.row(localStorage.getItem("storageDevice")).select()
-            } else {
-                devices_table.row().select()
-            }
-            initMissingTable()
-            
-        }          
+        info: false,   
     });
 
     // Enable select behaviour for device table

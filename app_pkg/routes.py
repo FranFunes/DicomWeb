@@ -1,12 +1,12 @@
-import json, ipaddress
+import json, ipaddress, os
 from datetime import datetime, timedelta
 from pydicom.multival import MultiValue
 
-from flask import render_template, request
-from app_pkg import application
+from flask import render_template, request, jsonify
+from app_pkg import application, db
 from app_pkg.aux_funcs import read_dataset, find_imgs_in_field
 from app_pkg.dicom_interface import DicomInterface
-from app_pkg.db_models import Patient, Study, Series, Instance
+from app_pkg.db_models import Patient, Study, Series, Instance, Device
 
 @application.route('/')
 @application.route('/index')
@@ -17,10 +17,14 @@ def query_retrieve():
 @application.route('/search_studies', methods = ['GET','POST'])
 def search_studies():
 
-    # Get device info from configuration
-    with open("config/devices.json", "r") as jsonfile:         
-        devices = json.load(jsonfile)    
-    device = devices[request.json['device']]
+    # Get device info from database
+    try:
+        device = Device.query.get(request.json['device'])
+        assert device
+    except AssertionError:
+        return jsonify({"msg":"El dispositivo no existe"}, status = 500)
+    except Exception as e:
+        return jsonify({"msg":"Error al leer la base de datos"}, status = 500)    
     
     # Parse and format study dates
     date_selector = request.json['dateSelector']
@@ -59,8 +63,9 @@ def search_studies():
             device['imgs_study']: ''}
 
     # Send the dicom query
-    ae = DicomInterface(ae_title = 'BECARIOSPANCHO')    
-    responses = ae.query_studies_in_device(device, qr, rs)
+    device_dict = {attr:getattr(device, attr) for attr in ["ae_title","port","address"]}
+    ae = DicomInterface(ae_title = os.environ['STORE_SCP_AET'])    
+    responses = ae.query_studies_in_device(device_dict, qr, rs)
     ae.release_connections()
 
     # Extract data from datasets
@@ -79,7 +84,7 @@ def search_studies():
         "data": full_data
     }
     
-    return 
+    return data
 
 @application.route('/local')
 def local():
@@ -143,10 +148,14 @@ def get_local_study_data():
 @application.route('/get_study_data', methods=['GET', 'POST'])
 def get_study_data():
     
-    # Get device info from configuration
-    with open("config/devices.json", "r") as jsonfile:         
-        devices = json.load(jsonfile)    
-    device = devices[request.json['source']]    
+    # Get device info from database
+    try:
+        device = Device.query.get(request.json['device'])
+        assert device
+    except AssertionError:
+        return jsonify({"msg":"El dispositivo no existe"}, status = 500)
+    except Exception as e:
+        return jsonify({"msg":"Error al leer la base de datos"}, status = 500)      
     
     # Build the data for the dicom query
     rs = {'SeriesNumber':'',
@@ -157,8 +166,9 @@ def get_study_data():
           device['imgs_series']: ''}
           
     # Send the dicom query
-    ae = DicomInterface(ae_title = 'BECARIOSPANCHO')
-    responses = ae.query_series_in_study(device, request.json['StudyInstanceUID'], responses = rs)
+    device_dict = {attr:getattr(device, attr) for attr in ["ae_title","port","address"]}
+    ae = DicomInterface(ae_title = os.environ['STORE_SCP_AET'])
+    responses = ae.query_series_in_study(device_dict, request.json['StudyInstanceUID'], responses = rs)
     ae.release_connections()
     
     # Extract data from datasets
@@ -181,12 +191,9 @@ def get_study_data():
 @application.route('/get_devices')
 def get_devices():
 
-    with open("config/devices.json", "r") as jsonfile:         
-        devices = json.load(jsonfile)    
-
-    devices = [{"name":key, "ae_title":value["ae_title"], "address":value["address"] + ":" + str(value["port"]),
-                "imgs_series": value["imgs_series"], "imgs_study": value["imgs_study"]} 
-               for key,value in devices.items()]
+    devices = [{"name":d.name, "ae_title":d.ae_title, "address":d.address + ":" + str(d.port),
+                "imgs_series": d.imgs_series, "imgs_study": d.imgs_study} 
+               for d in Device.query.all()]
 
     data = {
         "data": devices
@@ -201,10 +208,14 @@ def check_storage():
 @application.route('/find_missing_series', methods = ['GET','POST'])
 def find_missing_series():
 
-    # Get device info from configuration
-    with open("config/devices.json", "r") as jsonfile:         
-        devices = json.load(jsonfile)    
-    device = devices[request.json['device']]
+    # Get device info from database
+    try:
+        device = Device.query.get(request.json['device'])
+        assert device
+    except AssertionError:
+        return jsonify({"msg":"El dispositivo no existe"}, status = 500)
+    except Exception as e:
+        return jsonify({"msg":"Error al leer la base de datos"}, status = 500)      
 
     # Parse and format study dates
     date_selector = request.json['dateSelector']
@@ -272,10 +283,16 @@ def get_tasks_table():
 @application.route('/move', methods=['GET', 'POST'])
 def move():    
     
-    # Get source and destination ae_title
-    with open("config/devices.json", "r") as jsonfile:         
-        devices = json.load(jsonfile)    
-    destination = devices[request.json['destination']]["ae_title"]    
+    
+    # Get source and destination ae_title from database
+    try:
+        device = Device.query.get(request.json['destination'])
+        assert device
+    except AssertionError:
+        return jsonify({"msg":"El dispositivo no existe"}, status = 500)
+    except Exception as e:
+        return jsonify({"msg":"Error al leer la base de datos"}, status = 500)      
+    destination = device.ae_title 
 
     # Get items to send and remove repeated ones
     datasets = request.json['items']
@@ -301,34 +318,25 @@ def task_action():
 @application.route('/manage_devices', methods=['GET', 'POST'])
 def manage_devices():
     
-    with open("config/devices.json", "r") as jsonfile:         
-        devices = json.load(jsonfile)    
-    
-    action = request.json["action"]
     device_name = request.json["name"]
-
-    # Check if device already exists        
-    device_exists = device_name in devices
-    if action == "delete":
-        if not device_exists: return {"message":"Error: el dispositivo no existe"}   
-
-        # Delete device from config file
-        del devices[device_name]
-        with open("config/devices.json", "w") as jsonfile:         
-                json.dump(devices, jsonfile, indent = 2)
-
-        # Delete device from series_filters file
-        with open("config/series_filters.json", "r") as jsonfile:         
-            series_filters = json.load(jsonfile)  
-        del series_filters[device_name]
-        with open("config/series_filters.json", "w") as jsonfile:         
-                json.dump(series_filters, jsonfile, indent = 2)
-
-        return {"message":"Dispositivo eliminado correctamente"}
-    
-    # Check if AE title already exists
     ae_title = request.json["ae_title"]
 
+    # Query database for device
+    d = Device.query.get(device_name)
+       
+    action = request.json["action"]
+    if action == "delete":
+        if not d: return {"message":"Error: el dispositivo no existe"}  
+        # Delete device and associated filters     
+        try:   
+            db.session.delete(d)
+            for f in d.filters.all():
+                db.session.delete(f)            
+            return {"message":"Dispositivo eliminado correctamente"}
+        except:
+            return {"message":"Error al acceder a la base de datos"}
+    
+    
     # Check if IP is formatted correctly
     address = request.json["address"]
     try:
@@ -343,45 +351,37 @@ def manage_devices():
         port = int(port)
     except:
         return {"message":"Error: el puerto no es válido"}    
-    
-    
-    device = {"ae_title": ae_title, "address": address, "port": port}
-    
-    # Add new device
+            
     if action == "add":
-        
-        if device_exists: return {"message":"Error: el dispositivo ya existe"}    
-
-        # Get the DICOM field used by the device to show the number of
-        # imgs in each series (important to check storage)
-        field_names = {"imgs_series": request.json["imgs_series"] or "Unknown",
-                       "imgs_study": request.json["imgs_study"] or "Unknown"}
-        
-        device.update(field_names)
-
-        # Add device to config file
-        devices[device_name] = device
-        with open("config/devices.json", "w") as jsonfile:         
-                json.dump(devices, jsonfile, indent = 2)     
-
-        # Add device to series_filters file
-        with open("config/series_filters.json", "r") as jsonfile:         
-            series_filters = json.load(jsonfile)  
-        series_filters[device_name] = {}
-        with open("config/series_filters.json", "w") as jsonfile:         
-                json.dump(series_filters, jsonfile, indent = 2)
-        
-        return {"message":"Dispositivo agregado correctamente"}
-
+        # Add new device        
+        if d: return {"message":"Error: el dispositivo ya existe"}    
+        try:
+            # Add device to database
+            new_d = Device(name = device_name, ae_title = ae_title, address = address, port = port,
+            imgs_series = request.json["imgs_series"] or "Unknown",
+            imgs_study = request.json["imgs_study"] or "Unknown")
+            db.session.add(new_d)
+            db.session.commit()
+            return {"message":"Dispositivo agregado correctamente"}
+        except:
+            return {"message":"Error al acceder a la base de datos"}
+ 
     # Edit device
     elif action == "edit":
         # Check if device exists
-        if not device_exists: return {"message":"Error: el dispositivo no existe"}   
+        if not d: return {"message":"Error: el dispositivo no existe"}   
         
-        # Edit device in config file
-        devices[device_name].update(device)
-        with open("config/devices.json", "w") as jsonfile:         
-                json.dump(devices, jsonfile, indent = 2)
+        # Edit device in database     
+        try:            
+            d.ae_title = ae_title
+            d.address = address
+            d.port = port
+            d.imgs_series = request.json["imgs_series"] or "Unknown"
+            d.imgs_study = request.json["imgs_study"] or "Unknown"
+            db.session.commit()
+        except Exception as e:
+            print(repr(e))
+            return {"message":"Error al acceder a la base de datos"}
 
         return {"message":"Dispositivo editado correctamente"}    
     

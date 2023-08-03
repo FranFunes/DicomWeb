@@ -3,14 +3,15 @@ from datetime import datetime
 from pynetdicom.events import Event
 from pydicom.dataset import Dataset
 from app_pkg import application, db
-from app_pkg.db_models import Patient, Study, Series, Instance
+from app_pkg.db_models import Patient, Study, Series, Instance, Device, Filter
 from app_pkg.dicom_interface import DicomInterface
 
 logger = logging.getLogger('__main__')
 
 @application.shell_context_processor
 def make_shell_context():
-    return {'db': db, 'Patient': Patient, 'Study': Study, 'Series':Series, 'Instance':Instance}
+    return {'db': db, 'Patient': Patient, 'Study': Study, 'Series':Series, 'Instance':Instance,
+            'Device': Device, 'Filter': Filter}
 
 # Some functions to manage database operations
 def db_create_patient(ds: Dataset) -> Patient:
@@ -100,7 +101,7 @@ def db_create_instance(ds: Dataset, filename: str) -> Instance:
     return instance
 
 # Create an Store SCP to receive DICOM objects and store them in the database
-ae = DicomInterface(port = int(os.environ['STORE_SCP_PORT']))
+ae = DicomInterface(ae_title = os.environ['STORE_SCP_AET'], port = int(os.environ['STORE_SCP_PORT']))
 
 # Create a handler for the store request event
 def store_handler(event: Event, root_dir = 'incoming') -> int:

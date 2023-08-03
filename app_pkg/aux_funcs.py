@@ -3,6 +3,7 @@ from typing import List
 from datetime import datetime, timedelta
 from app_pkg.dicom_interface import DicomInterface
 from pynetdicom.sop_class import StudyRootQueryRetrieveInformationModelFind
+import os
 
 def read_dataset(ds:Dataset, fields_to_read:List[str], field_names:dict = {}, default_value = None,
                  fields_handlers:dict = {}, format_datetimes = True):
@@ -83,7 +84,7 @@ def find_imgs_in_field(device: dict) -> dict:
     ds.StudyInstanceUID = ''
     ds.NumberOfStudyRelatedInstances = ''
     
-    ae = DicomInterface(ae_title = 'BECARIOSPANCHO')
+    ae = DicomInterface(ae_title = os.environ['STORE_SCP_AET'])
     try:
         assoc = ae.get_association(device)
     except:
