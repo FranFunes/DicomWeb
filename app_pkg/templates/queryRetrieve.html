@@ -43,65 +43,14 @@
               <li class="nav-item">
                 <a class="nav-link" href="/tasks">Tareas</a>
               </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/config">Config</a>
+              </li>
             </ul>
           </div>
     </nav>
     
-    <div class="container">
-
-        <!-- Modal for device CRUD -->
-        <div class="modal fade" id="deviceModal">
-            <div class="modal-dialog modal-dialog-centered">
-                <div class="modal-content">
-            
-                    <!-- Modal Header -->
-                    <div class="modal-header">
-                    <h4 class="modal-title">Nuevo Dispositivo</h4>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-            
-                    <!-- Modal body -->
-                    <div class="modal-body">
-                        <form id="deviceManagerForm">
-                            <div class="mb-3 mt-3">
-                                <label for="deviceManagerName" class="form-label">Nombre</label>
-                                <input type="text" class="form-control" id="deviceManagerName" name="deviceManagerName">
-                            </div>
-                            <div class="mb-3">
-                                <label for="deviceManagerAET" class="form-label">AE Title</label>
-                                <input type="text" class="form-control" id="deviceManagerAET" name="deviceManagerAET">
-                            </div>
-                            <div class="mb-3">
-                                <label for="deviceManagerIP" class="form-label">IP</label>
-                                <input type="text" class="form-control" id="deviceManagerIP" name="deviceManagerIP">
-                            </div>
-                            <div class="mb-3">
-                                <label for="deviceManagerPort" class="form-label">Puerto</label>
-                                <input type="text" class="form-control" id="deviceManagerPort" name="deviceManagerPort">
-                            </div>
-                            <div class="mb-3">
-                                <label for="deviceManagerImgsSeries" class="form-label">Imágenes en estudio / serie</label>
-                                <div class="input-group">
-                                    <input id="deviceManagerImgsStudy" type="text" class="form-control" disabled>
-                                    <button class="btn btn-primary queryImgsFieldBtn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
-                                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
-                                      </svg></button>                                    
-                                </div>
-                                <div class="input-group">
-                                    <input id="deviceManagerImgsSeries" type="text" class="form-control" disabled>
-                                    <button class="btn btn-primary queryImgsFieldBtn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
-                                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
-                                      </svg></button>                                    
-                                </div>
-                            </div>                            
-                            <div class="modal-footer">
-                                <button type="submit" id="deviceManagerSubmit" class="btn btn-danger" data-bs-dismiss="modal">Enviar</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="container">        
         
         <!-- Title -->
         <div class="row">
@@ -133,14 +82,7 @@
                             <legend class="h6">Dispositivo</legend>
                             <table id="devices" class="display compact" style="width:100%">
                             
-                            </table>
-                            <div class="row pt-2">            
-                                <div class="col text-end">
-                                    <button type="button" id="newDevice" class="deviceControl btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#deviceModal">Nuevo</button>
-                                    <button type="button" id="editDevice" class="deviceControl btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#deviceModal">Editar</button>
-                                    <button type="button" id="deleteDevice" class="deviceControl btn btn-sm btn-outline-dark">Eliminar</button>                  
-                                </div>
-                            </div>
+                            </table>                            
                         </fieldset>                    
                     </div>
                     <!-- Date selection -->

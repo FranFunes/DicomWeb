@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Bootstrap 5 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- jQuery -->
+    <script type="text/javascript" src="https://code.jquery.com/jquery-3.5.1.js"></script>
+
+    <!-- Datatables -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
+    <script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.13.4/sl-1.6.2/datatables.min.js"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    
+    <!-- Custom -->
+    <link rel="stylesheet" href="static/styles.css">
+    <script type="text/javascript" src="static/config.js" type="module"></script>
+        
+    <title>Dicom App</title>
+</head>
+<body>
+
+    <!-- Navigation bar -->
+    <nav class="navbar navbar-expand-sm bg-dark navbar-dark fixed-top">
+        <div class="container-fluid">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                  <a class="nav-link" href="/local">Local</a>
+                </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/queryRetrieve">Query/Retrieve</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/checkStorage">Archivado</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="/tasks">Tareas</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link active" href="/config">Config</a>
+              </li>
+            </ul>
+          </div>
+    </nav>
+    
+    <div class="container">
+
+        <!-- Modal for remote device CRUD -->
+        <div class="modal fade" id="deviceModal">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+            
+                    <!-- Modal Header -->
+                    <div class="modal-header">
+                    <h4 class="modal-title">Nuevo Dispositivo</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+            
+                    <!-- Modal body -->
+                    <div class="modal-body">
+                        <form id="deviceManagerForm">
+                            <div class="mb-3 mt-3">
+                                <label for="deviceManagerName" class="form-label">Nombre</label>
+                                <input type="text" class="form-control" id="deviceManagerName" name="deviceManagerName">
+                            </div>
+                            <div class="mb-3">
+                                <label for="deviceManagerAET" class="form-label">AE Title</label>
+                                <input type="text" class="form-control" id="deviceManagerAET" name="deviceManagerAET">
+                            </div>
+                            <div class="mb-3">
+                                <label for="deviceManagerIP" class="form-label">IP</label>
+                                <input type="text" class="form-control" id="deviceManagerIP" name="deviceManagerIP">
+                            </div>
+                            <div class="mb-3">
+                                <label for="deviceManagerPort" class="form-label">Puerto</label>
+                                <input type="text" class="form-control" id="deviceManagerPort" name="deviceManagerPort">
+                            </div>
+                            <div class="mb-3">
+                                <label for="deviceManagerImgsSeries" class="form-label">Imágenes en estudio / serie</label>
+                                <div class="input-group">
+                                    <input id="deviceManagerImgsStudy" type="text" class="form-control" disabled>
+                                    <button class="btn btn-primary queryImgsFieldBtn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                                      </svg></button>                                    
+                                </div>
+                                <div class="input-group">
+                                    <input id="deviceManagerImgsSeries" type="text" class="form-control" disabled>
+                                    <button class="btn btn-primary queryImgsFieldBtn"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
+                                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                                      </svg></button>                                    
+                                </div>
+                            </div>                            
+                            <div class="modal-footer">
+                                <button type="submit" id="deviceManagerSubmit" class="btn btn-danger" data-bs-dismiss="modal">Enviar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal for local device CRUD -->
+        <div class="modal fade" id="localDeviceModal">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+            
+                    <!-- Modal Header -->
+                    <div class="modal-header">
+                    <h4 class="modal-title">Local DICOM Application</h4>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+            
+                    <!-- Modal body -->
+                    <div class="modal-body">
+                        <form id="localDeviceManagerForm">        
+                            <div class="mb-3">
+                                <label for="deviceManagerAET" class="form-label">AE Title</label>
+                                <input type="text" class="form-control" id="localDeviceManagerAET" name="localDeviceManagerAET">
+                            </div>                  
+                            <div class="modal-footer">
+                                <button type="submit" id="localDeviceManagerSubmit" class="btn btn-danger" data-bs-dismiss="modal">Send</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Title -->
+        <div class="row">
+            <h1 class="display-6 text-center">Configuración</h1>
+        </div>
+
+        <!-- Local DICOM configuration -->
+        <div class="row pt-3">
+            <div class="col">
+                <div class="card">
+                    <div class="card-header">
+                      Local DICOM Application
+                    </div>
+                    <div class="card-body">                            
+                        <div class="grid-container">                            
+                            <div class="grid-item">AE Title:</div>
+                            <div class="grid-item" id="localAET"></div>
+                            <div class="grid-item">IP Address:</div>
+                            <div class="grid-item" id="localIP"></div>
+                            <div class="grid-item">Port:</div>
+                            <div class="grid-item" id="localPort"></div>                            
+                          </div>
+                        <div class="col text-end">
+                            <button type="button" id="editLocalDevice" class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#localDeviceModal">Edit</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div> 
+
+        <!-- Remote DICOM devices configuration -->
+        <div class="row pt-3">
+            <div class="col">
+                <div class="card">   
+                    <div class="card-header">
+                        Remote DICOM devices
+                      </div>
+                    <div class="card-body">
+                        <table id="devices" class="display compact" style="width:100%">
+                        
+                        </table>
+                        <div class="row pt-2">            
+                            <div class="col text-end">
+                                <button type="button" id="newDevice" class="deviceControl btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#deviceModal">Nuevo</button>
+                                <button type="button" id="editDevice" class="deviceControl btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#deviceModal">Editar</button>
+                                <button type="button" id="deleteDevice" class="deviceControl btn btn-sm btn-outline-dark">Eliminar</button>            
+                            </div>
+                        </div>
+                    </div>                    
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+    <br>
+</body>
+</html>

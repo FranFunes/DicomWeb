@@ -1,4 +1,4 @@
-import json, ipaddress, os
+import json, ipaddress, os, psutil
 from datetime import datetime, timedelta
 from pydicom.multival import MultiValue
 
@@ -191,9 +191,11 @@ def get_study_data():
 @application.route('/get_devices')
 def get_devices():
 
+    devices = Device.query.all()
+
     devices = [{"name":d.name, "ae_title":d.ae_title, "address":d.address + ":" + str(d.port),
                 "imgs_series": d.imgs_series, "imgs_study": d.imgs_study} 
-               for d in Device.query.all()]
+               for d in devices if d.name!="local"]
 
     data = {
         "data": devices
@@ -331,7 +333,8 @@ def manage_devices():
         try:   
             db.session.delete(d)
             for f in d.filters.all():
-                db.session.delete(f)            
+                db.session.delete(f)  
+            db.session.commit()
             return {"message":"Dispositivo eliminado correctamente"}
         except:
             return {"message":"Error al acceder a la base de datos"}
@@ -393,3 +396,50 @@ def query_imgs_field():
     field_names = find_imgs_in_field(device)
     
     return field_names
+
+@application.route('/config')
+def render_config():
+    return render_template('config.html')
+
+@application.route('/get_local_device')
+def get_local_device():
+
+    local = Device.query.get('local')
+        
+    # Get the IP address for each network interface available
+    interfaces = psutil.net_if_addrs()
+    stats = psutil.net_if_stats()
+    available_networks = {}
+    for intface, addr_list in interfaces.items():
+        if any(getattr(addr, 'address').startswith("169.254") for addr in addr_list):
+            continue
+        elif intface in stats and getattr(stats[intface], "isup"):
+            available_networks[intface] = addr_list
+    ips = []
+    [[ips.append(item.address) for item in interface if item.family.name == 'AF_INET' and not item.address == '127.0.0.1'] for interface in available_networks.values()]
+    address = '/'.join(ips)
+    device = {'ae_title': local.ae_title, 'address': address, 'port': local.port}
+
+    data = {
+        "data": device
+    }
+
+    return data
+
+@application.route('/manage_local_device', methods=['GET', 'POST'])
+def manage_local_device():    
+    
+
+    try:
+        # Edit device in database
+        local = Device.query.get('local')
+        local.ae_title = request.json["ae_title"]
+    except:
+        logger.error('Local device configuration could not be updated on the database')
+        return jsonify(message = 'Local device configuration could not be updated on the database'), 500
+    
+    # Restart DICOM interfaces
+    services['store_scp'].restart(request.json["ae_title"]  )
+    services['store_scu'].ae_title = request.json["ae_title"]  
+            
+    return {"message":"Local device was updated successfully"} 

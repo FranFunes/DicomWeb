@@ -18,6 +18,14 @@
   margin-top: 80px;
 }
 
+.grid-container {
+  display: grid;
+  grid-template-rows: auto auto auto;
+  grid-template-columns: max-content auto;
+  row-gap: 0.25rem;
+  column-gap: 1rem;
+}
+
 .progress {
   position: relative;
 }
