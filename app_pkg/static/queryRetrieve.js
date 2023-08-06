@@ -16,7 +16,6 @@ $(document).ready(function () {
 
             // Select last selected device
             if (localStorage.getItem('sourceDevice') !== null) {
-                console.log(localStorage.getItem("sourceDevice"))
                 devices_table.row(localStorage.getItem("sourceDevice")).select()
             } else {
                 devices_table.row().select()

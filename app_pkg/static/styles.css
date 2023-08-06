@@ -1,10 +1,10 @@
-#devices td {
-    font-size: 0.7rem;
-  }
-
 #studies td {
-  font-size: 0.85rem;
+  font-size: 0.75rem;
 }  
+
+.tab-small-text {
+  font-size: 0.75rem;
+}
 
 #tasks td {
   font-size: 0.8rem;
@@ -38,4 +38,14 @@
   right: 0;
   left: 0;
   top: 0;
+}
+
+@media only screen and (max-width: 575px) {
+  .fixed-top {
+    position: relative
+  }
+  .container {
+    margin-top: 1.5rem
+  }
+  
 }

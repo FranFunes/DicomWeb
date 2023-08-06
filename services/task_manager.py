@@ -1,14 +1,16 @@
+from time import sleep
+from datetime import datetime
+from queue import Queue
+import threading, json, os
+
 import pandas as pd
 from numpy import argmax
-from datetime import datetime
-from time import sleep
-import threading, json, os
-from queue import Queue
-from app_pkg import application
-from app_pkg.dicom_interface import DicomInterface
-from app_pkg.db_models import Device
-from pydicom.dataset import Dataset
 from pynetdicom.sop_class import StudyRootQueryRetrieveInformationModelMove
+from pydicom.dataset import Dataset
+
+from app_pkg import application
+from app_pkg.db_models import Device
+from services.dicom_interface import DicomInterface
 
 class DeviceTasksHandler():
     """
@@ -44,7 +46,8 @@ class DeviceTasksHandler():
         self.task_modifiers = Queue()
 
         # Initialize DICOM interface
-        self.ae = DicomInterface(ae_title = os.environ['STORE_SCP_AET'])
+        with application.app_context():
+            self.ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__'))
         
         # Initialize the current task id to None
         self.current_task_id = None
@@ -382,7 +385,7 @@ class CheckStorageManager():
             device = Device.query.get(device_name)
             pacs = Device.query.get('PACS')
         assert device  
-        device = {attr:getattr(device, attr) for attr in ["ae_title","port","address"]}
+        device = {attr:getattr(device, attr) for attr in ["ae_title","port","address","imgs_study"]}
         pacs = {attr:getattr(pacs, attr) for attr in ["ae_title","port","address"]}
 
         # Build the data for the dicom query
@@ -391,10 +394,11 @@ class CheckStorageManager():
             'PatientID': '',
             'StudyTime': '',
             'StudyDescription': '',
-            device['imgs_study']: ''}
+            device["imgs_study"]: ''}
         
         # Start a DICOM AE to perform C-FIND operations on the device
-        ae = DicomInterface(ae_title = os.environ['STORE_SCP_AET'])          
+        with application.app_context():
+            ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__'))          
 
         # Query studies and series in the target device
         self.status = 'Buscando estudios en el dispositivo...'
@@ -436,7 +440,8 @@ class CheckStorageManager():
         series_in_device = list(filter(lambda x: self.series_filter(x, device_name), series_in_device))
 
         # PACS connection
-        ae_pacs = DicomInterface(ae_title = os.environ['STORE_SCP_AET'])
+        with application.app_context():
+            ae_pacs = DicomInterface(ae_title = Device.query.get('__local_store_SCP__'))
         
         # Check if each series exists in PACS with the same number of images
         self.status = 'Buscando series en el PACS...' 
@@ -500,6 +505,3 @@ class CheckStorageManager():
                 pass
 
         return True
-
-application.task_manager = TaskManager()
-application.check_storage_manager = CheckStorageManager()

@@ -71,16 +71,22 @@
                                 <input type="text" class="form-control" id="deviceManagerName" name="deviceManagerName">
                             </div>
                             <div class="mb-3">
-                                <label for="deviceManagerAET" class="form-label">AE Title</label>
-                                <input type="text" class="form-control" id="deviceManagerAET" name="deviceManagerAET">
+                                <label for="deviceManagerAET" class="form-label">AE Title</label>                                
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="deviceManagerAET" name="deviceManagerAET">
+                                    <button class="btn btn-primary" id="echoRemoteDevice">Echo</button>                                    
+                                </div>   
                             </div>
                             <div class="mb-3">
                                 <label for="deviceManagerIP" class="form-label">IP</label>
-                                <input type="text" class="form-control" id="deviceManagerIP" name="deviceManagerIP">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="deviceManagerIP" name="deviceManagerIP">
+                                    <button class="btn btn-primary" id="pingRemoteDevice">Ping </button>                                    
+                                </div>                                
                             </div>
                             <div class="mb-3">
                                 <label for="deviceManagerPort" class="form-label">Puerto</label>
-                                <input type="text" class="form-control" id="deviceManagerPort" name="deviceManagerPort">
+                                <input type="number" class="form-control" id="deviceManagerPort" name="deviceManagerPort">
                             </div>
                             <div class="mb-3">
                                 <label for="deviceManagerImgsSeries" class="form-label">Imágenes en estudio / serie</label>
@@ -123,7 +129,11 @@
                             <div class="mb-3">
                                 <label for="deviceManagerAET" class="form-label">AE Title</label>
                                 <input type="text" class="form-control" id="localDeviceManagerAET" name="localDeviceManagerAET">
-                            </div>                  
+                            </div>            
+                            <div class="mb-3">
+                                <label for="deviceManagerPort" class="form-label">Port</label>
+                                <input type="number" class="form-control" id="localDeviceManagerPort" name="localDeviceManagerPort">
+                            </div>       
                             <div class="modal-footer">
                                 <button type="submit" id="localDeviceManagerSubmit" class="btn btn-danger" data-bs-dismiss="modal">Send</button>
                             </div>
@@ -156,6 +166,7 @@
                           </div>
                         <div class="col text-end">
                             <button type="button" id="editLocalDevice" class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#localDeviceModal">Edit</button>
+                            <button type="button" id="testLocalDevice" class="btn btn-primary">Test</button>
                         </div>
                     </div>
                 </div>
@@ -175,9 +186,9 @@
                         </table>
                         <div class="row pt-2">            
                             <div class="col text-end">
-                                <button type="button" id="newDevice" class="deviceControl btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#deviceModal">Nuevo</button>
-                                <button type="button" id="editDevice" class="deviceControl btn btn-sm btn-outline-dark" data-bs-toggle="modal" data-bs-target="#deviceModal">Editar</button>
-                                <button type="button" id="deleteDevice" class="deviceControl btn btn-sm btn-outline-dark">Eliminar</button>            
+                                <button type="button" id="newDevice" class="deviceControl btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#deviceModal">Nuevo</button>
+                                <button type="button" id="editDevice" class="deviceControl btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#deviceModal">Editar</button>
+                                <button type="button" id="deleteDevice" class="deviceControl btn btn-outline-dark">Eliminar</button>            
                             </div>
                         </div>
                     </div>                    

@@ -49,7 +49,8 @@ $(document).ready(function () {
     // Local device manager
     $("#editLocalDevice").on('click', function () {    
         // Fill form with local device info
-        $('#localDeviceManagerAET').val($("#localAET").text())        
+        $('#localDeviceManagerAET').val($("#localAET").text())      
+        $('#localDeviceManagerPort').val($("#localPort").text())   
     })
 
     // Edit local device form submit
@@ -57,7 +58,8 @@ $(document).ready(function () {
         // Prevent the form from submitting normally
         event.preventDefault();      
         var ajax_data = {
-            "ae_title":  $('#localDeviceManagerAET').val()
+            "ae_title":  $('#localDeviceManagerAET').val(),
+            "port": parseInt($('#localDeviceManagerPort').val()),
         }
         $.ajax({
             url: "/manage_local_device",
@@ -70,10 +72,28 @@ $(document).ready(function () {
                 alert(response.message)
                 // Update local device info
                 $("#localAET").text(ajax_data.ae_title)
+                $("#localPort").text(ajax_data.port)
             },
             error: function(xhr, status, error) {
                 // handle error response here
                 alert(xhr.responseJSON.message);
+            }
+            });  
+    });
+
+    // Test local device
+    $("#testLocalDevice").on('click', function(event) {
+        // Prevent the form from submitting normally
+        event.preventDefault();              
+        $.ajax({
+            url: "/test_local_device",
+            success: function(response) {                    
+                // Show success message
+                alert(response.message)
+            },
+            error: function(xhr, status, error) {
+                // handle error response here                
+                alert('Fallo');
             }
             });  
     });
@@ -157,13 +177,84 @@ $(document).ready(function () {
                 console.log(xhr.responseText);
             }
             });     
+    });
 
+    // Ping remote device
+    $("#pingRemoteDevice").on('click', function(event) {
+        // Prevent the form from submitting normally
+        event.preventDefault();     
+
+        $(this)[0].innerHTML = `<span class="spinner-border spinner-border-sm"></span>`
+        $(this).prop('disabled', true);
+                
+        var ajax_data = {
+            "address": $('#deviceManagerIP').val()
+        }
+        $.ajax({
+            url: "/ping_remote_device",
+            method: "POST",
+            data:   JSON.stringify(ajax_data),
+            dataType: "json",
+            contentType: "application/json",
+            success: function(response) {                    
+                // Show success message
+                $("#pingRemoteDevice")[0].innerHTML = 'Success'
+                $("#pingRemoteDevice").prop('disabled', false)
+                $("#pingRemoteDevice").addClass('btn-success')
+                $("#pingRemoteDevice").removeClass('btn-danger')
+
+            },
+            error: function(xhr, status, error) {
+                // handle error response here
+                $("#pingRemoteDevice")[0].innerHTML = 'Failed'
+                $("#pingRemoteDevice").prop('disabled', false)
+                $("#pingRemoteDevice").addClass('btn-danger')
+                $("#pingRemoteDevice").removeClass('btn-success')
+
+            }
+        });
+    });
+
+    // Echo remote device
+    $("#echoRemoteDevice").on('click', function(event) {
+        // Prevent the form from submitting normally
+        event.preventDefault();     
+
+        $(this)[0].innerHTML = `<span class="spinner-border spinner-border-sm"></span>`
+        $(this).prop('disabled', true);
+        
+        var ajax_data = {
+            "ae_title":  $('#deviceManagerAET').val(),
+            "address": $('#deviceManagerIP').val(),
+            "port": parseInt($('#deviceManagerPort').val()),
+        }
+        
+        $.ajax({
+            url: "/echo_remote_device",
+            method: "POST",
+            data:   JSON.stringify(ajax_data),
+            dataType: "json",
+            contentType: "application/json",
+            success: function(response) {                    
+                // Show success message
+                $("#echoRemoteDevice")[0].innerHTML = 'Success'
+                $("#echoRemoteDevice").prop('disabled', false)
+                $("#echoRemoteDevice").addClass('btn-success')
+                $("#echoRemoteDevice").removeClass('btn-danger')
+            },
+            error: function(xhr, status, error) {
+                // handle error response here
+                $("#echoRemoteDevice")[0].innerHTML = 'Failed'
+                $("#echoRemoteDevice").prop('disabled', false)
+                $("#echoRemoteDevice").addClass('btn-danger')
+                $("#echoRemoteDevice").removeClass('btn-suc cess')
+            }
+        });
     });
     
     // Query for imgs fields
     $(".queryImgsFieldBtn").on('click', function(event) {
 
-        console.log('click')
         event.preventDefault();
 
         $(".queryImgsFieldBtn").each(function() {
@@ -205,7 +296,7 @@ $(document).ready(function () {
                 $('#deviceManagerImgsStudy').val("Unknown")
                 $('#deviceManagerImgsSeries').val("Unknown") 
             }
-            });   
+        });   
     })
 
 });

@@ -9,5 +9,4 @@ application.config.from_object(Config)
 db = SQLAlchemy(application)
 migrate = Migrate(application, db)
 
-from app_pkg import routes, db_models
-from app_pkg.task_manager import TaskManager, CheckStorageManager
+from app_pkg import routes

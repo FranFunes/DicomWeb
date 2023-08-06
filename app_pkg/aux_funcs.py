@@ -1,9 +1,12 @@
-from pydicom.dataset import Dataset
+import subprocess, os
 from typing import List
 from datetime import datetime, timedelta
-from app_pkg.dicom_interface import DicomInterface
+from pydicom.dataset import Dataset
 from pynetdicom.sop_class import StudyRootQueryRetrieveInformationModelFind
-import os
+
+from app_pkg import application
+from app_pkg.db_models import Device
+from services.dicom_interface import DicomInterface
 
 def read_dataset(ds:Dataset, fields_to_read:List[str], field_names:dict = {}, default_value = None,
                  fields_handlers:dict = {}, format_datetimes = True):
@@ -84,8 +87,9 @@ def find_imgs_in_field(device: dict) -> dict:
     ds.StudyInstanceUID = ''
     ds.NumberOfStudyRelatedInstances = ''
     
-    ae = DicomInterface(ae_title = os.environ['STORE_SCP_AET'])
     try:
+        with application.app_context():
+            ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title)
         assoc = ae.get_association(device)
     except:
         return {"imgs_study": 'Unknown', "imgs_series": 'Unknown'}
@@ -148,3 +152,25 @@ def find_imgs_in_field(device: dict) -> dict:
     assoc.release()
 
     return {"imgs_study": imgs_in_study, "imgs_series": imgs_in_series}
+
+
+def ping(target_host, timeout = 100, count = 3):
+
+    if os.name == "nt":
+        command = ["ping", "-w", str(timeout), "-n", str(count), target_host]
+    elif os.name == "posix":
+        command = ["ping", "-W", str(timeout), "-c", str(count), target_host]
+    else:
+        return False
+
+    try:
+        completed_process = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        stdout = completed_process.stdout
+        stderr = completed_process.stderr
+
+        if completed_process.returncode == 0:
+            return True
+        else:
+            return False
+    except subprocess.CalledProcessError as e:
+        return False

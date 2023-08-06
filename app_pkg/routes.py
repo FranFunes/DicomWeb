@@ -1,12 +1,15 @@
-import json, ipaddress, os, psutil
+import json, ipaddress, os, psutil, logging
 from datetime import datetime, timedelta
 from pydicom.multival import MultiValue
 
 from flask import render_template, request, jsonify
 from app_pkg import application, db
-from app_pkg.aux_funcs import read_dataset, find_imgs_in_field
-from app_pkg.dicom_interface import DicomInterface
+from app_pkg.aux_funcs import read_dataset, find_imgs_in_field, ping
+from services.dicom_interface import DicomInterface
 from app_pkg.db_models import Patient, Study, Series, Instance, Device
+from services import task_manager, check_storage_manager, store_scp
+
+logger = logging.getLogger('__main__')
 
 @application.route('/')
 @application.route('/index')
@@ -60,11 +63,19 @@ def search_studies():
             'StudyTime': '',
             'ModalitiesInStudy':  '',
             'StudyDescription': '',
-            device['imgs_study']: ''}
+            device.imgs_study: ''}
 
     # Send the dicom query
     device_dict = {attr:getattr(device, attr) for attr in ["ae_title","port","address"]}
-    ae = DicomInterface(ae_title = os.environ['STORE_SCP_AET'])    
+    try:
+        device = Device.query.get(request.json['device'])
+        assert device
+    except AssertionError:
+        return jsonify({"msg":"El dispositivo no existe"}, status = 500)
+    except Exception as e:
+        return jsonify({"msg":"Error al leer la base de datos"}, status = 500)    
+
+    ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title)    
     responses = ae.query_studies_in_device(device_dict, qr, rs)
     ae.release_connections()
 
@@ -72,8 +83,8 @@ def search_studies():
     full_data = []
     for study in responses:
 
-        data = read_dataset(study, ['PatientName','PatientID','StudyDate','StudyTime','ModalitiesInStudy','StudyDescription',device['imgs_study'],'StudyInstanceUID'],
-                             field_names = {device['imgs_study']:'ImgsStudy'},
+        data = read_dataset(study, ['PatientName','PatientID','StudyDate','StudyTime','ModalitiesInStudy','StudyDescription',device.imgs_study,'StudyInstanceUID'],
+                             field_names = {device.imgs_study:'ImgsStudy'},
                              fields_handlers = {'PatientName': lambda x: str(x.value),
                                                 'ModalitiesInStudy': lambda x: '/'.join(x.value) if type(x.value) == MultiValue else x.value})  
         
@@ -163,19 +174,19 @@ def get_study_data():
           'SeriesTime': '',
           'SeriesDescription': '',
           'Modality':'',
-          device['imgs_series']: ''}
+          device.imgs_series: ''}
           
     # Send the dicom query
     device_dict = {attr:getattr(device, attr) for attr in ["ae_title","port","address"]}
-    ae = DicomInterface(ae_title = os.environ['STORE_SCP_AET'])
+    ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title)
     responses = ae.query_series_in_study(device_dict, request.json['StudyInstanceUID'], responses = rs)
     ae.release_connections()
     
     # Extract data from datasets
     full_data = []
     for series in responses:
-        data = read_dataset(series, ['SeriesNumber','SeriesDate','SeriesTime','Modality','SeriesDescription',device['imgs_series'],'SeriesInstanceUID'],
-                            field_names = {device['imgs_series']:'ImgsSeries'},
+        data = read_dataset(series, ['SeriesNumber','SeriesDate','SeriesTime','Modality','SeriesDescription',device.imgs_series,'SeriesInstanceUID'],
+                            field_names = {device.imgs_series:'ImgsSeries'},
                              default_value = '')
         # Add study data
         data.update(request.json)         
@@ -195,7 +206,7 @@ def get_devices():
 
     devices = [{"name":d.name, "ae_title":d.ae_title, "address":d.address + ":" + str(d.port),
                 "imgs_series": d.imgs_series, "imgs_study": d.imgs_study} 
-               for d in devices if d.name!="local"]
+               for d in devices if d.name!="__local_store_SCP__"]
 
     data = {
         "data": devices
@@ -237,15 +248,15 @@ def find_missing_series():
         studydate = start_date.strftime('%Y%m%d')+'-'+end_date.strftime('%Y%m%d')
     
     # Find missing series
-    missing_series = application.check_storage_manager.find_missing_series(request.json['device'], studydate)
+    missing_series = check_storage_manager.find_missing_series(request.json['device'], studydate)
 
     # Extract missing series data from datasets
     series_data = []
     for ds in missing_series:
         ds_data = read_dataset(ds, ['PatientName','PatientID',
                                     'StudyDescription','StudyInstanceUID','StudyDate','StudyTime',
-                                    'SeriesTime','SeriesNumber','Modality','SeriesDescription',device['imgs_series'],'SeriesInstanceUID'],
-                                    field_names = {device['imgs_series']:'ImgsSeries'}, 
+                                    'SeriesTime','SeriesNumber','Modality','SeriesDescription',device.imgs_series,'SeriesInstanceUID'],
+                                    field_names = {device.imgs_series:'ImgsSeries'}, 
                                     default_value = '',
                                     fields_handlers = {'PatientName': lambda x: str(x.value)})
         ds_data['source'] = request.json['device']
@@ -262,8 +273,8 @@ def find_missing_series():
 def check_storage_progress():
 
     return {"data": {
-        "status": application.check_storage_manager.status,
-        "progress": f"{100*application.check_storage_manager.progress:.0f}%"
+        "status": check_storage_manager.status,
+        "progress": f"{100*check_storage_manager.progress:.0f}%"
     }}
 
 @application.route('/empty_table', methods = ['GET','POST'])
@@ -278,13 +289,12 @@ def tasks():
 @application.route('/get_tasks_table')
 def get_tasks_table():
 
-    data = application.task_manager.get_tasks_table()
+    data = task_manager.get_tasks_table()
 
     return {"data": data}
 
 @application.route('/move', methods=['GET', 'POST'])
-def move():    
-    
+def move():       
     
     # Get source and destination ae_title from database
     try:
@@ -305,7 +315,7 @@ def move():
     for task_data in datasets:
         task_data['destination'] = destination
         task_data['type'] = 'MOVE'
-        application.task_manager.manage_task(action = 'new', task_data = task_data)
+        task_manager.manage_task(action = 'new', task_data = task_data)
 
     return {"message": f"Se agregaron {len(datasets)} trabajos a la cola"}
     
@@ -314,7 +324,7 @@ def task_action():
     
     ids = request.json['ids']
     for task_id in ids:
-        application.task_manager.manage_task(action = request.json['action'], task_id = task_id)
+        task_manager.manage_task(action = request.json['action'], task_id = task_id)
     return {"data": "success"}
 
 @application.route('/manage_devices', methods=['GET', 'POST'])
@@ -404,19 +414,18 @@ def render_config():
 @application.route('/get_local_device')
 def get_local_device():
 
-    local = Device.query.get('local')
+    local = Device.query.get('__local_store_SCP__')
         
     # Get the IP address for each network interface available
     interfaces = psutil.net_if_addrs()
     stats = psutil.net_if_stats()
-    available_networks = {}
+    ips = []
     for intface, addr_list in interfaces.items():
         if any(getattr(addr, 'address').startswith("169.254") for addr in addr_list):
             continue
         elif intface in stats and getattr(stats[intface], "isup"):
-            available_networks[intface] = addr_list
-    ips = []
-    [[ips.append(item.address) for item in interface if item.family.name == 'AF_INET' and not item.address == '127.0.0.1'] for interface in available_networks.values()]
+            [ips.append(addr.address) for addr in addr_list if addr.family.name =='AF_INET' and not addr.address=='127.0.0.1']
+    
     address = '/'.join(ips)
     device = {'ae_title': local.ae_title, 'address': address, 'port': local.port}
 
@@ -427,19 +436,73 @@ def get_local_device():
     return data
 
 @application.route('/manage_local_device', methods=['GET', 'POST'])
-def manage_local_device():    
-    
-
+def manage_local_device():        
     try:
         # Edit device in database
-        local = Device.query.get('local')
+        local = Device.query.get('__local_store_SCP__')
+        local.port = request.json['port']
         local.ae_title = request.json["ae_title"]
     except:
         logger.error('Local device configuration could not be updated on the database')
         return jsonify(message = 'Local device configuration could not be updated on the database'), 500
     
+    # Keep backup values for ae title and port
+    old_aet = store_scp.ae_title
+    old_port = store_scp.port
+
     # Restart DICOM interfaces
-    services['store_scp'].restart(request.json["ae_title"]  )
-    services['store_scu'].ae_title = request.json["ae_title"]  
-            
-    return {"message":"Local device was updated successfully"} 
+    try:
+        # Set new values for ae title and port and restart store scp
+        store_scp.stop_store_scp()
+        store_scp.ae_title = request.json["ae_title"]
+        store_scp.port = request.json['port']
+        store_scp.start_store_scp()
+        # If succesful, commit changes to database
+        db.session.commit()
+        return {"message":"Local device was updated successfully"} 
+    except Exception as e:
+        # If failed, rollback database changes and try to restart store scp with original attributes
+        db.session.rollback()
+        store_scp.ae_title = old_aet
+        store_scp.port = old_port
+        store_scp.start_store_scp()
+        logger.error(repr(e))
+        return jsonify(message = 'Local AET configuration could not be restarted with the selected configuration'), 500
+
+@application.route('/test_local_device', methods=['GET', 'POST'])
+def test_local_device():   
+
+    ae = DicomInterface()  
+    try:
+        # Get local device info from database
+        local = Device.query.get('__local_store_SCP__')
+    except:
+        logger.error('Database connection error')
+        return jsonify(message = 'Local device configuration could not be read from the database'), 500
+
+    device = {attr:getattr(local,attr) for attr in ['ae_title','port']}
+    device['address'] = '127.0.0.1'    
+    echo_response = ae.echo(device)
+    if echo_response == 0:
+        return jsonify(message = 'Success'), 200
+    else:
+        return jsonify(message = 'Failed'), 200     
+
+@application.route('/echo_remote_device', methods=['GET', 'POST'])
+def echo_remote_device():       
+    echo_response = store_scp.echo(request.json)
+    if echo_response == 0:
+        return jsonify(message = f"DICOM ECHO to {request.json['ae_title']}@{request.json['address']}:{request.json['port']} succesful"), 200
+    else:
+        return jsonify(message = f"DICOM ECHO to {request.json['ae_title']}@{request.json['address']}:{request.json['port']} failed"), 500  
+    
+    
+
+@application.route('/ping_remote_device', methods=['GET', 'POST'])
+def ping_remote_device():   
+
+    ping_result = ping(request.json['address'], count = 2)
+    if ping_result:
+        return jsonify(message = request.json['address'] + ' is reacheable!!!'), 200
+    else:
+        return jsonify(message = request.json['address'] + ' is unreacheable!!!'), 500  

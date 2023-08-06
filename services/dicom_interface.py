@@ -13,8 +13,10 @@ from pynetdicom.events import Event
 from pynetdicom.sop_class import (
     StudyRootQueryRetrieveInformationModelFind,
     StudyRootQueryRetrieveInformationModelMove,
-    StudyRootQueryRetrieveInformationModelGet
+    StudyRootQueryRetrieveInformationModelGet,
+    Verification
 )
+
 debug_logger()
 # Setup logging behaviour
 app_logger = logging.getLogger('__main__')
@@ -159,10 +161,13 @@ class DicomInterface(AE):
         self.add_requested_context(StudyRootQueryRetrieveInformationModelFind)
         self.add_requested_context(StudyRootQueryRetrieveInformationModelMove)
         self.add_requested_context(StudyRootQueryRetrieveInformationModelGet)  
+        self.add_requested_context(Verification)
         
         # Add supported contexts (when acting as SCP)
         self.supported_contexts = StoragePresentationContexts
+        self.add_supported_context(Verification)
         self.add_supported_context('1.2.840.113619.4.30') # GE PET Raw data
+
 
     def start_store_scp(self) -> None:        
 
@@ -174,7 +179,12 @@ class DicomInterface(AE):
         if not self.port:
             raise(ValueError('Listening port must be specified before starting the StoreSCP. Set it to a int in the port attribute.'))
         
-        handlers = [(evt.EVT_C_STORE, self.store_handler)]            
+        # Implement a handler for evt.EVT_C_ECHO
+        def handle_echo(event):
+            """Handle a C-ECHO request event."""
+            return 0x0000
+
+        handlers = [(evt.EVT_C_STORE, self.store_handler), (evt.EVT_C_ECHO, handle_echo)]            
 
         # Start listening for incoming association requests
         self.server = self.start_server((self.address, self.port), evt_handlers=handlers, block = False)
