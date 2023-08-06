@@ -14,15 +14,21 @@ $(document).ready(function () {
         info: false,
         initComplete: function() {
 
+            initDestinations()
+
+            // Delete PACS entry
+            devices_table.column(0).search('PACS').row().remove().draw()
+
             // Select last selected device
             if (localStorage.getItem('storageDevice') !== null) {
                 devices_table.row(localStorage.getItem("storageDevice")).select()
             } else {
                 devices_table.row().select()
             }
-        },
+            initMissingTable()
+            
+        }          
     });
-
 
     // Enable select behaviour for device table
     $('#devices tbody').on('click', 'tr', function () {                
@@ -70,7 +76,7 @@ $(document).ready(function () {
 
     // Disable progress bar smooth transition
     $('#storageProgress').css({transition: "width 0s ease 0s"})
-        
+    
 });
 
 // Initialize missing series table
@@ -132,14 +138,10 @@ function initMissingTable() {
         }
     });
 
-    
-    console.log(136)
-
     // Manage the missing series search (form submission)
     $("#find_missing").submit(function(event) {
         // Prevent the form from submitting normally
         event.preventDefault();
-        console.log('find missing')
 
         // Start interval to monitor status
         var interval = setInterval(updateStatus, 1000);
@@ -166,6 +168,7 @@ function initMissingTable() {
         // Retrieve new data      
         table_studies.ajax.reload(function() {
             // Stop refreshing and update aspect
+            console.log('Ajax response')
             clearInterval(interval)
             $('#storageProgress').css("width","100%")            
             $('#storageStatus').text(" ")

@@ -47,7 +47,7 @@ class DeviceTasksHandler():
 
         # Initialize DICOM interface
         with application.app_context():
-            self.ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__'))
+            self.ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title)
         
         # Initialize the current task id to None
         self.current_task_id = None
@@ -385,8 +385,8 @@ class CheckStorageManager():
             device = Device.query.get(device_name)
             pacs = Device.query.get('PACS')
         assert device  
-        device = {attr:getattr(device, attr) for attr in ["ae_title","port","address","imgs_study"]}
-        pacs = {attr:getattr(pacs, attr) for attr in ["ae_title","port","address"]}
+        device = {attr:getattr(device, attr) for attr in ["ae_title","port","address","imgs_study","imgs_series"]}
+        pacs = {attr:getattr(pacs, attr) for attr in ["ae_title","port","address","imgs_study","imgs_series"]}
 
         # Build the data for the dicom query
         qr = {'StudyDate':  studydate}        
@@ -398,7 +398,7 @@ class CheckStorageManager():
         
         # Start a DICOM AE to perform C-FIND operations on the device
         with application.app_context():
-            ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__'))          
+            ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title)          
 
         # Query studies and series in the target device
         self.status = 'Buscando estudios en el dispositivo...'
@@ -441,7 +441,7 @@ class CheckStorageManager():
 
         # PACS connection
         with application.app_context():
-            ae_pacs = DicomInterface(ae_title = Device.query.get('__local_store_SCP__'))
+            ae_pacs = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title)
         
         # Check if each series exists in PACS with the same number of images
         self.status = 'Buscando series en el PACS...' 
@@ -477,7 +477,7 @@ class CheckStorageManager():
         with application.app_context():
             device = Device.query.get(device_name)
             assert device
-        filters = device.filters.all()
+            filters = device.filters.all()
         
         for f in filters:
             try:
@@ -488,9 +488,8 @@ class CheckStorageManager():
                 pass
         
         # El resonador 3T tiene algunas reglas más complicadas, por ahora
-        # van a mano
-        
-        if device_name == 'RMN':
+        # van a mano        
+        if device_name == 'RESO 3T':
             try:
                 if ds.NumberOfSeriesRelatedInstances == 0: return False
             except:
