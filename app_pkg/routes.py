@@ -208,7 +208,6 @@ def get_devices():
                 "imgs_series": d.imgs_series, "imgs_study": d.imgs_study,
                 "filters": [{"field": f.field, "value":f.value} for f in d.basic_filters.all()]} 
                for d in devices if d.name!="__local_store_SCP__"]
-    print(devices)
     data = {
         "data": devices
     }

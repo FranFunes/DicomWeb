@@ -338,7 +338,7 @@ $(document).ready(function () {
                 return filter_data
             }
         ).get()
-        console.log(filters)
+        (filters)
         var ajax_data = {
             "device": device,
             "filters":  filters

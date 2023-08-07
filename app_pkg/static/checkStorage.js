@@ -169,7 +169,6 @@ function initMissingTable() {
         // Retrieve new data      
         table_studies.ajax.reload(function() {
             // Stop refreshing and update aspect
-            console.log('Ajax response')
             clearInterval(interval)
             $('#storageProgress').css("width","100%")            
             $('#storageStatus').text(" ")
@@ -195,7 +194,6 @@ function initMissingTable() {
 
         // Get selected rows
         ajax_data.items = $('#missing').DataTable().rows( { selected : true }).data().toArray()
-        console.log(ajax_data.items)
 
         // Send request
         $.ajax({

@@ -80,7 +80,7 @@ function initStudiesTable() {
             items.push($(element.closest('table')).DataTable().row(element).data())                        
         }
         ajax_data.items = items
-        console.log(ajax_data)
+        (ajax_data)
         $.ajax({
             url: "/move",
             method: "POST",
