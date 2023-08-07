@@ -235,9 +235,16 @@ class DeviceTasksHandler():
         if task_data['type'] == 'MOVE':
             
             # Get source from database      
+            s = task_data['source']
+            if s == 'local':
+                s = '__local_store_SCP__'
             with application.app_context():
-                device = Device.query.get(task_data['source'])
-            assert device
+                try:
+                    device = Device.query.get(s)
+                    assert device
+                except AssertionError:
+                    logger.error(f"Device {s} not found")
+                    
             destination = task_data['destination']
 
             # Get the number of imgs to move
