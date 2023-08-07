@@ -13,7 +13,7 @@ $(document).ready(function () {
         ordering: false,
         info: false,
         initComplete: function() {
-
+            
             // Select last selected device
             if (localStorage.getItem('sourceDevice') !== null) {
                 devices_table.row(localStorage.getItem("sourceDevice")).select()
@@ -218,7 +218,6 @@ function initStudiesTable() {
             items.push($(element.closest('table')).DataTable().row(element).data())                        
         }
         ajax_data.items = items
-        (ajax_data)
         $.ajax({
             url: "/move",
             method: "POST",
@@ -240,6 +239,9 @@ function initStudiesTable() {
 }
 
 function initDestinations() {
+    // Append local device
+    $('#destinations').append($('<option>', { 'Local' : 'Local' }).text('Local'));
+    // Append remote devices
     var selectValues = $('#devices').DataTable().column(0).data()
     $.each(selectValues, function(key, value) {
         $('#destinations')

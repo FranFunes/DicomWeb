@@ -235,15 +235,14 @@ class DeviceTasksHandler():
             with application.app_context():
                 device = Device.query.get(task_data['source'])
             assert device
-            source = devices[task_data['source']]
             destination = task_data['destination']
 
             # Get the number of imgs to move
             imgs = task_data['ImgsStudy'] if task_data['level'] == 'STUDY' else task_data['ImgsSeries']
 
             # Create a new DICOM association to perform the C-MOVE
-            source = {attr:getattr(source, attr) for attr in ["ae_title","port","address"]}
-            association = self.ae.get_association(source)# associate(source['address'], source['port'], ae_title = source['ae_title'])
+            source = {attr:getattr(device, attr) for attr in ["ae_title","port","address"]}
+            association = self.ae.get_association(source)
             self.tasks_list[task_id]['association'] = association
 
             # Create the dataset for the C-MOVE operation
@@ -251,7 +250,7 @@ class DeviceTasksHandler():
             ds.QueryRetrieveLevel = task_data['level']
             ds.StudyInstanceUID = task_data['StudyInstanceUID']
             if task_data['level'] == 'SERIES': ds.SeriesInstanceUID = task_data['SeriesInstanceUID']
-            #print(f"_create_task_step_handler: dataset {ds}")
+
             c_move_responses = association.send_c_move(ds, move_aet = destination, query_model = StudyRootQueryRetrieveInformationModelMove)
 
             while True:
@@ -262,7 +261,6 @@ class DeviceTasksHandler():
                     raise ValueError                    
                 if not bool(rsp[0]):
                     # An empty response indicates a failure state. Raise RuntimeError
-                    #print(f"Step handler - empty response")
                     raise RuntimeError                
                 try:
                     completed = rsp[0]['NumberOfCompletedSuboperations'].value

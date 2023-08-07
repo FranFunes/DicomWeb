@@ -25,9 +25,9 @@ def search_studies():
         device = Device.query.get(request.json['device'])
         assert device
     except AssertionError:
-        return jsonify({"msg":"El dispositivo no existe"}, status = 500)
+        return jsonify(message = "El dispositivo no existe"), 500
     except Exception as e:
-        return jsonify({"msg":"Error al leer la base de datos"}, status = 500)    
+        return jsonify(message = "Error al leer la base de datos"), 500    
     
     # Parse and format study dates
     date_selector = request.json['dateSelector']
@@ -71,9 +71,9 @@ def search_studies():
         device = Device.query.get(request.json['device'])
         assert device
     except AssertionError:
-        return jsonify({"msg":"El dispositivo no existe"}, status = 500)
+        return jsonify(message = "El dispositivo no existe"), 500
     except Exception as e:
-        return jsonify({"msg":"Error al leer la base de datos"}, status = 500)    
+        return jsonify(message = "Error al leer la base de datos"), 500  
 
     ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title)    
     responses = ae.query_studies_in_device(device_dict, qr, rs)
@@ -94,7 +94,7 @@ def search_studies():
     data = {
         "data": full_data
     }
-    
+    print(full_data)
     return data
 
 @application.route('/local')
@@ -161,12 +161,13 @@ def get_study_data():
     
     # Get device info from database
     try:
-        device = Device.query.get(request.json['device'])
+        device = Device.query.get(request.json['source'])
         assert device
     except AssertionError:
-        return jsonify({"msg":"El dispositivo no existe"}, status = 500)
+        return jsonify(message = "El dispositivo no existe"), 500
     except Exception as e:
-        return jsonify({"msg":"Error al leer la base de datos"}, status = 500)      
+        print(repr(e))
+        return jsonify(message = "Error al leer la base de datos"), 500
     
     # Build the data for the dicom query
     rs = {'SeriesNumber':'',
@@ -223,12 +224,12 @@ def find_missing_series():
 
     # Get device info from database
     try:
-        device = Device.query.get(request.json['device'])
+        device = Device.query.get(request.json['source'])
         assert device
     except AssertionError:
-        return jsonify({"msg":"El dispositivo no existe"}, status = 500)
+        return jsonify(message = "El dispositivo no existe"), 500
     except Exception as e:
-        return jsonify({"msg":"Error al leer la base de datos"}, status = 500)      
+        return jsonify(message = "Error al leer la base de datos"), 500
 
     # Parse and format study dates
     date_selector = request.json['dateSelector']
@@ -296,22 +297,25 @@ def get_tasks_table():
 @application.route('/move', methods=['GET', 'POST'])
 def move():       
     
-    # Get source and destination ae_title from database
+    # Get destination ae_title from database
+    dest = request.json['destination']
+    if dest == 'Local':
+        dest = '__local_store_SCP__'
     try:
-        device = Device.query.get(request.json['destination'])
+        device = Device.query.get(dest)
         assert device
     except AssertionError:
-        return jsonify({"msg":"El dispositivo no existe"}, status = 500)
+        return jsonify(message = "El dispositivo no existe"), 500
     except Exception as e:
-        return jsonify({"msg":"Error al leer la base de datos"}, status = 500)      
+        return jsonify(message = "Error al leer la base de datos"), 500      
     destination = device.ae_title 
 
     # Get items to send and remove repeated ones
     datasets = request.json['items']
     studies_uids = [ds['StudyInstanceUID'] for ds in datasets if ds['level'] == 'STUDY']
     datasets = list(filter(lambda x: not (x['level'] == 'SERIES' and x['StudyInstanceUID'] in studies_uids), datasets))
-        
-    # Send datasets
+    
+    # Send datasets 
     for task_data in datasets:
         task_data['destination'] = destination
         task_data['type'] = 'MOVE'

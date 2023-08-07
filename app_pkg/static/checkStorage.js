@@ -13,19 +13,18 @@ $(document).ready(function () {
         ordering: false,
         info: false,
         initComplete: function() {
-
-            initDestinations()
-
+            
             // Delete PACS entry
             idx = devices_table.column(0).data().toArray().indexOf('PACS')
             devices_table.row(idx).remove().draw()
-
+            
             // Select last selected device
             if (localStorage.getItem('storageDevice') !== null) {
                 devices_table.row(localStorage.getItem("storageDevice")).select()
             } else {
                 devices_table.row().select()
             }
+            initDestinations()
             initMissingTable()
             
         }          
@@ -216,6 +215,10 @@ function initMissingTable() {
 }
 
 function initDestinations() {
+    // Append PACS
+    $('#destinations').append($('<option>', { 'PACS' : 'PACS' }).text('PACS'));
+    // Append local device
+    $('#destinations').append($('<option>', { 'Local' : 'Local' }).text('Local'));
     var selectValues = $('#devices').DataTable().column(0).data()
     $.each(selectValues, function(key, value) {
         $('#destinations')

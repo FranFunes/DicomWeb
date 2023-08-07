@@ -17,7 +17,7 @@ from pynetdicom.sop_class import (
     Verification
 )
 
-#debug_logger()
+debug_logger()
 # Setup logging behaviour
 app_logger = logging.getLogger('__main__')
 
