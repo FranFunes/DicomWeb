@@ -6,7 +6,7 @@ from flask import render_template, request, jsonify
 from app_pkg import application, db
 from app_pkg.aux_funcs import read_dataset, find_imgs_in_field, ping
 from services.dicom_interface import DicomInterface
-from app_pkg.db_models import Patient, Study, Series, Instance, Device
+from app_pkg.db_models import Patient, Study, Series, Instance, Device, BasicFilter
 from services import task_manager, check_storage_manager, store_scp
 
 logger = logging.getLogger('__main__')
@@ -205,9 +205,10 @@ def get_devices():
     devices = Device.query.all()
 
     devices = [{"name":d.name, "ae_title":d.ae_title, "address":d.address + ":" + str(d.port),
-                "imgs_series": d.imgs_series, "imgs_study": d.imgs_study} 
+                "imgs_series": d.imgs_series, "imgs_study": d.imgs_study,
+                "filters": [{"field": f.field, "value":f.value} for f in d.basic_filters.all()]} 
                for d in devices if d.name!="__local_store_SCP__"]
-
+    print(devices)
     data = {
         "data": devices
     }
@@ -342,7 +343,7 @@ def manage_devices():
         # Delete device and associated filters     
         try:   
             db.session.delete(d)
-            for f in d.filters.all():
+            for f in d.basic_filters.all():
                 db.session.delete(f)  
             db.session.commit()
             return {"message":"Dispositivo eliminado correctamente"}
@@ -459,7 +460,7 @@ def manage_local_device():
         store_scp.start_store_scp()
         # If succesful, commit changes to database
         db.session.commit()
-        return {"message":"Local device was updated successfully"} 
+        return {"message":"Local DICOM interface configuration was updated successfully"} 
     except Exception as e:
         # If failed, rollback database changes and try to restart store scp with original attributes
         db.session.rollback()
@@ -467,7 +468,7 @@ def manage_local_device():
         store_scp.port = old_port
         store_scp.start_store_scp()
         logger.error(repr(e))
-        return jsonify(message = 'Local AET configuration could not be restarted with the selected configuration'), 500
+        return jsonify(message = 'Local AET configuration could not be restarted with the selected configuration. Restoring previous values.'), 500
 
 @application.route('/test_local_device', methods=['GET', 'POST'])
 def test_local_device():   
@@ -484,9 +485,9 @@ def test_local_device():
     device['address'] = '127.0.0.1'    
     echo_response = ae.echo(device)
     if echo_response == 0:
-        return jsonify(message = 'Success'), 200
+        return jsonify(message = 'Local DICOM interface is up and running!!!'), 200
     else:
-        return jsonify(message = 'Failed'), 200     
+        return jsonify(message = 'Local DICOM interface is not running'), 200     
 
 @application.route('/echo_remote_device', methods=['GET', 'POST'])
 def echo_remote_device():       
@@ -495,8 +496,7 @@ def echo_remote_device():
         return jsonify(message = f"DICOM ECHO to {request.json['ae_title']}@{request.json['address']}:{request.json['port']} succesful"), 200
     else:
         return jsonify(message = f"DICOM ECHO to {request.json['ae_title']}@{request.json['address']}:{request.json['port']} failed"), 500  
-    
-    
+       
 
 @application.route('/ping_remote_device', methods=['GET', 'POST'])
 def ping_remote_device():   
@@ -506,3 +506,23 @@ def ping_remote_device():
         return jsonify(message = request.json['address'] + ' is reacheable!!!'), 200
     else:
         return jsonify(message = request.json['address'] + ' is unreacheable!!!'), 500  
+
+@application.route('/update_device_filters', methods=['GET', 'POST'])
+def update_device_filters():   
+
+    d = Device.query.get(request.json['device'])
+
+    # Delete existent filters
+    for f in d.basic_filters.all():
+        db.session.delete(f)
+    
+    # Append new filters to device
+    for filter_data in request.json['filters']:
+        f = BasicFilter(field = filter_data['field'], value = filter_data['value'], device = d)
+        db.session.add(f)
+
+    db.session.commit()
+
+    return jsonify(message = 'Filters for ' + request.json['device'] + ' updated succesfully'), 200  
+
+    

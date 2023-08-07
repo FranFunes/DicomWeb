@@ -44,7 +44,7 @@ $(document).ready(function () {
         }
     });
         
-    // ------------------ Device manager
+    //////////////////////////// Device manager //////////////////////////////
 
     // Local device manager
     $("#editLocalDevice").on('click', function () {    
@@ -299,7 +299,109 @@ $(document).ready(function () {
         });   
     })
 
+    //////////////////////////// Device manager //////////////////////////////
+
+    // Add new basic filter callback
+    $("#newBasicFilterBtn").on('click', function(event) {
+        element = createBasicFilter()
+        element.insertBefore($(this))
+    })
+
+    // Adapt modal contents depending on selected action
+    $("#editDeviceFilters").on('click', function () {
+                
+        // Reset existent filters
+        $("#editBasicFiltersForm").find('.basicFilter').remove()
+        // Fill form with selected device info
+        data = devices_table.rows({ selected: true }).data()[0]
+        $('#filteredDevice').text(data.name)
+        // Show existent basic filters       
+        data.filters.forEach(function(filter) {
+            element = createBasicFilter(filter.field, filter.value)
+            element.insertBefore($("#newBasicFilterBtn"))
+        })        
+    })
+
+    // Edit filters form submit    
+    $("#editBasicFiltersForm").submit(function(event) {
+        
+        event.preventDefault();    
+        
+        device = devices_table.rows({ selected: true }).data()[0].name
+        
+        filters = $(this).find('.basicFilter').map(function(index, item) {
+
+                filter_data = {
+                        field: $(item).find('.fieldSelect').val(),
+                        value: $(item).find('input').val(),
+                    }
+                return filter_data
+            }
+        ).get()
+        console.log(filters)
+        var ajax_data = {
+            "device": device,
+            "filters":  filters
+        }
+
+        $.ajax({
+            url: "/update_device_filters",
+            method: "POST",
+            data:   JSON.stringify(ajax_data),
+            dataType: "json",
+            contentType: "application/json",
+            success: function(response) {                    
+                // Show success message
+                alert(response.message)
+            },
+            error: function(xhr, status, error) {
+                // handle error response here
+                console.log(xhr.responseText);
+            }
+            });
+    });
 });
+
+// Add basic filter
+function createBasicFilter(field, value) {
+    
+
+    var element = $(`<div class="row mb-1 basicFilter">                                        
+                        <div class="col-sm-4">                        
+                            <select class="form-select form-select-sm fieldSelect">
+                                <option value="PatientName">PatientName</option>
+                                <option value="PatientID">PatientID</option>
+                                <option value="Modality">Modality</option>
+                                <option value="SeriesDescription">SeriesDescription</option>
+                                <option value="SeriesNumber">SeriesNumber</option>
+                            </select>
+                        </div>
+                        <div class="col">
+                            <input type="text" class="form-control form-control-sm" placeholder="Valor"> 
+                        </div>                                           
+                    </div>`)  
+
+    if (field !== undefined) {
+        element.find(`.fieldSelect option[value=${field}]`).prop('selected', true);
+        element.find('input').val(value)
+    }
+    var column = $(`<div class="col-sm-1">
+                    </div>`)
+    var button = $(`<button class="btn btn-sm btn-danger deleteBasicFilter">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash" viewBox="0 0 16 16">
+                            <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5Zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6Z"/>
+                            <path d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1ZM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118ZM2.5 3h11V2h-11v1Z"/>
+                        </svg>
+                    </button>`)
+    button.on('click', function(event) {
+        event.preventDefault()
+        element.remove()
+    })    
+    column.append(button)    
+    element.prepend(column) 
+    
+    return element
+}
 
 // Don't show alerts on ajax errors
 $.fn.dataTable.ext.errMode = 'throw';

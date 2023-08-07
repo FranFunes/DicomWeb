@@ -70,12 +70,12 @@ class Device(db.Model):
     imgs_study = db.Column(db.String(64))
 
     # Cross-references down
-    filters = db.relationship('Filter', backref='device', lazy='dynamic')  
+    basic_filters = db.relationship('BasicFilter', backref='device', lazy='dynamic')  
 
     def __repr__(self):
         return f'<Device {self.name}: {self.ae_title}@{self.address}>'
 
-class Filter(db.Model):
+class BasicFilter(db.Model):
 
     id = db.Column(db.Integer(), primary_key=True)
     field = db.Column(db.String(64), index=True)
@@ -85,7 +85,7 @@ class Filter(db.Model):
     device_name = db.Column(db.String(64), db.ForeignKey('device.name'))
 
     def __repr__(self):
-        return f'<Filter {self.field}: {self.value} for device {self.device_name}>'
+        return f'<Basic filter {self.field}: {self.value} for device {self.device_name}>'
     
 
 

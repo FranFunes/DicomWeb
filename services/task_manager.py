@@ -477,13 +477,16 @@ class CheckStorageManager():
         with application.app_context():
             device = Device.query.get(device_name)
             assert device
-            filters = device.filters.all()
+            filters = device.basic_filters.all()
         
         for f in filters:
             try:
-                value = getattr(ds, field)
+                value = getattr(ds, f.field)
                 if value == f.value:
-                    return False                
+                    if f.mode:
+                        return False   
+                    elif not f.mode:
+                        return False                
             except:
                 pass
         

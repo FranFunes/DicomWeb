@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <!-- Bootstrap 5 -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
     
     <!-- jQuery -->
@@ -112,6 +112,49 @@
             </div>
         </div>
 
+        <!-- Modal for remote device filters CRUD -->
+        <div class="modal fade" id="filtersModal">
+            <div class="modal-dialog modal-xl">
+                <div class="modal-content">
+            
+                    <!-- Modal Header -->
+                    <div class="modal-header">
+                        <h4 class="modal-title">Filtros de archivado para <span id="filteredDevice">device_name</span></h4>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+            
+                    <!-- Modal body -->
+                    <div class="modal-body">
+                        <ul class="nav nav-tabs" role="tablist">
+                            <li class="nav-item">
+                              <a class="nav-link active" data-bs-toggle="tab" href="#filters-basic">Básico</a>
+                            </li>
+                            <li class="nav-item">
+                              <a class="nav-link" data-bs-toggle="tab" href="#filters-advanced">Avanzado</a>
+                            </li>
+                          </ul>
+                        
+                          <!-- Tab panes -->
+                          <div class="tab-content">
+                            <div id="filters-basic" class="tab-pane active"><br>                              
+                                <form id="editBasicFiltersForm">                                                                        
+                                    <div class="d-grid mb-3">
+                                        <button type="button" class="btn btn-primary btn-block btn-sm" id="newBasicFilterBtn">Nuevo filtro</button>
+                                    </div>      
+                                    <div class="modal-footer">
+                                        <button type="submit" id="editBasicFiltersSubmit" class="btn btn-danger" data-bs-dismiss="modal">Send</button>
+                                    </div>
+                                </form>
+                            </div>
+                            <div id="filters-advanced" class="tab-pane fade"><br>                              
+                              <p>No implementado</p>
+                            </div>
+                          </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Modal for local device CRUD -->
         <div class="modal fade" id="localDeviceModal">
             <div class="modal-dialog modal-dialog-centered">
@@ -188,6 +231,7 @@
                             <div class="col text-end">
                                 <button type="button" id="newDevice" class="deviceControl btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#deviceModal">Nuevo</button>
                                 <button type="button" id="editDevice" class="deviceControl btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#deviceModal">Editar</button>
+                                <button type="button" id="editDeviceFilters" class="deviceControl btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#filtersModal">Filtros</button>
                                 <button type="button" id="deleteDevice" class="deviceControl btn btn-outline-dark">Eliminar</button>            
                             </div>
                         </div>

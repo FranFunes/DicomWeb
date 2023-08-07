@@ -17,7 +17,8 @@ $(document).ready(function () {
             initDestinations()
 
             // Delete PACS entry
-            devices_table.column(0).search('PACS').row().remove().draw()
+            idx = devices_table.column(0).data().toArray().indexOf('PACS')
+            devices_table.row(idx).remove().draw()
 
             // Select last selected device
             if (localStorage.getItem('storageDevice') !== null) {
