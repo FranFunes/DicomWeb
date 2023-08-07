@@ -16,6 +16,7 @@ def db_create_patient(ds: Dataset) -> Patient:
         # Raise error if patient already exists
         patient = Patient.query.get(pat_id)
         if patient is not None:
+            logger.error('patient already exists.')
             raise ValueError("This patient already exists")
         patient = Patient(PatientID = pat_id, PatientName = pat_name)
         db.session.add(patient)
@@ -31,6 +32,7 @@ def db_create_study(ds: Dataset) -> Study:
         # Raise error if study already exists
         study = Study.query.get(uid)
         if study is not None:
+            logger.error('study already exists.')
             raise ValueError("This study already exists")
         # Check if patient already exists and create it if not
         patient = Patient.query.get(ds.PatientID) or db_create_patient(ds)
@@ -54,6 +56,7 @@ def db_create_series(ds: Dataset) -> Series:
         # Raise error if series already exists
         series = Series.query.get(uid)
         if series is not None:
+            logger.error('series already exists.')
             raise ValueError("This series already exists")
         # Check if patient and study already exist or create them if not
         patient = Patient.query.get(ds.PatientID) or db_create_patient(ds)
@@ -78,6 +81,7 @@ def db_create_instance(ds: Dataset, filename: str) -> Instance:
         # Raise error if instance already exists
         instance = Instance.query.get(uid)
         if instance is not None:
+            logger.error('instance already exists.')
             raise ValueError("This instance already exists")
         # Check if patient, study and series already exist or create them if not
         patient = Patient.query.get(ds.PatientID) or db_create_patient(ds)
@@ -117,4 +121,5 @@ def store_handler(event: Event, root_dir = 'incoming') -> int:
 
     else:
         # Return a 'Success' status
+        logger.debug('instance stored successfully.')
         return 0x0000

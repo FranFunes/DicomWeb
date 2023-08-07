@@ -4,3 +4,5 @@ config
 .DS_Store
 app.db
 incoming
+logs
+output.log

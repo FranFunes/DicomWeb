@@ -1,7 +1,7 @@
 from time import sleep
 from datetime import datetime
 from queue import Queue
-import threading, json, os
+import threading, logging
 
 import pandas as pd
 from numpy import argmax
@@ -11,6 +11,8 @@ from pydicom.dataset import Dataset
 from app_pkg import application
 from app_pkg.db_models import Device
 from services.dicom_interface import DicomInterface
+
+logger = logging.getLogger('__main__')
 
 class DeviceTasksHandler():
     """
@@ -76,7 +78,8 @@ class DeviceTasksHandler():
 
     def manage_task(self, id, action, data = None) -> None:
         modifier = {'action':action, 'task_id':id, 'data':data}
-        #print(f"manage_task - new modifier: action: {action}, task_id: {id}")
+       
+        logger.debug(f"manage_task - new modifier: action: {action}, task_id: {id}")
         self.task_modifiers.put(modifier)
 
     def _main(self):
@@ -86,13 +89,13 @@ class DeviceTasksHandler():
             if not self.task_modifiers.empty():                
                 # Execute task modifier                
                 modifier = self.task_modifiers.get()
-                #print(f"_main: new modifier with action: {modifier['action']}, task_id: {modifier['task_id']}")
+                logger.debug(f"_main: new modifier with action: {modifier['action']}, task_id: {modifier['task_id']}")
                 self._modify_task(modifier)
                 # Set the next task to be performed
                 self._next_task()
             elif not self.current_task_id == None:
                 # Perform a step for the current task    
-                #print(f"_main - step, current task: {self.current_task_id}")
+                logger.debug(f"_main - step, current task: {self.current_task_id}")
                 self._task_step(self.current_task_id)
             else:
                 sleep(1)            
@@ -109,49 +112,49 @@ class DeviceTasksHandler():
         
         if action == 'new':
             self._new_task(id, modifier['data'])
-            #print(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
+            logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
         elif action == 'pause':
             if self.tasks_list[id]['status'] in ['active','pending']:
-                #print(f"_modify_task - Paused task with id {id}")
+                logger.debug(f"_modify_task - Paused task with id {id}")
                 self.tasks_list[id]['status'] = 'paused'
-                #print(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
+                logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
                 
         elif action == 'continue':
             if self.tasks_list[id]['status'] == 'paused':
-                #print(f"_modify_task - Continue task with id {id}")
+                logger.debug(f"_modify_task - Continue task with id {id}")
                 self.tasks_list[id]['status'] = 'pending'                
                 
         elif action == 'retry':
             # Get known task data
-            #print(f"_modify_task - Retry task with id {id}")
+            logger.debug(f"_modify_task - Retry task with id {id}")
             task_data = self.tasks_list[id]['data']
             self.tasks_list.pop(id)  
             self._new_task(id, task_data)            
-            #print(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
+            logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
             
         elif action == 'rush':
             if not self.tasks_list[id]['status'] in ['completed','failed']:
-                #print(f"_modify_task - Rush task with id {id}")
+                logger.debug(f"_modify_task - Rush task with id {id}")
                 current_priorities = [task['priority'] for task in self.tasks_list.values()]
                 self.tasks_list[id]['priority'] = max(current_priorities) + 1                
-                #print(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
+                logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
 
         elif action == 'delete':
             if 'association' in self.tasks_list[id]:
                 self.tasks_list[id]['association'].release()
             self.tasks_list.pop(id)
-            #print(f"_modify_task - Delete task with id {id}")
-            #print(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
+            logger.debug(f"_modify_task - Delete task with id {id}")
+            logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
 
         elif action == 'complete':
-            #print(f"_modify_task - Completed task with id {id}")            
+            logger.debug(f"_modify_task - Completed task with id {id}")            
             self.tasks_list[id]['status'] = 'completed'
-            #print(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
+            logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
 
         elif action == 'fail':
-            #print(f"_modify_task - Failed task with id {id}")
+            logger.debug(f"_modify_task - Failed task with id {id}")
             self.tasks_list[id]['status'] = 'failed'
-            #print(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
+            logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
     
     def _next_task(self):
         
@@ -160,47 +163,47 @@ class DeviceTasksHandler():
         
         if not active_tasks:
             self.current_task_id = None
-            #print(f"_next_task - No active/pending tasks")
+            logger.debug(f"_next_task - No active/pending tasks")
         else:            
             next_task_idx = argmax([task['priority'] for id, task in active_tasks])
             next_task_id = active_tasks[next_task_idx][0]
-            #print(f"_next_task - Previous task id: {self.current_task_id}")
-            #print(f"_next_task - Next task id: {next_task_id}")
+            logger.debug(f"_next_task - Previous task id: {self.current_task_id}")
+            logger.debug(f"_next_task - Next task id: {next_task_id}")
             # Change active and pending status if current task id is different from new one
             if next_task_id != self.current_task_id:
                 if (not self.current_task_id == None) and self.tasks_list[self.current_task_id]['status'] == 'active':
-                    #print(f"_next_task - Changing task {self.current_task_id} to pending")
+                    logger.debug(f"_next_task - Changing task {self.current_task_id} to pending")
                     self.tasks_list[self.current_task_id]['status'] = 'pending'                
-                #print(f"_next_task - Changing task {next_task_id} to active")
+                logger.debug(f"_next_task - Changing task {next_task_id} to active")
                 self.tasks_list[next_task_id]['status'] = 'active'           
-                #print(f"_next_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")            
+                logger.debug(f"_next_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")            
                 self.current_task_id = next_task_id        
 
     def _task_step(self, task_id):
 
-        #print(f"_task_step - task_id: {task_id}")
+        logger.debug(f"_task_step - task_id: {task_id}")
         current_task = self.tasks_list[task_id]
         # Take the step
         try:
             # Update task progress   
             progress = next(current_task['step'])    
-            #print(f"_task_step - step success, progress: {progress}")
+            logger.debug(f"_task_step - step success, progress: {progress}")
             current_task['progress'] = progress
         except ValueError as e:
             # Set task as completed
             self.tasks_list[task_id]['association'].release()
-            #print(f"_task_step - value error")
-            #print(e)
+            logger.debug(f"_task_step - value error")
+            logger.debug(repr(e))
             self.manage_task(task_id, action = 'complete')
         except StopIteration as e:
             self.tasks_list[task_id]['association'].release()
-            #print(f"_task_step - stop iteration")
+            logger.debug(f"_task_step - stop iteration")
             self.manage_task(task_id, action = 'complete')        
         except RuntimeError as e:
             # Set task as failed
             self.tasks_list[task_id]['association'].release()
-            #print(f"_task_step - runtime error")
-            #print(repr(e))
+            logger.debug(f"_task_step - runtime error")
+            logger.debug(repr(e))
             self.manage_task(task_id, action = 'fail')
     
     def _new_task(self, id, data):
@@ -225,7 +228,7 @@ class DeviceTasksHandler():
         # Append the task to the tasks list
         self.tasks_list[id] = task
 
-        #print(f"_new_task -  Added new task with id {id} and priority {priority}")
+        logger.debug(f"_new_task -  Added new task with id {id} and priority {priority}")
 
     def _create_task_step_handler(self, task_id, task_data):
 
@@ -360,8 +363,7 @@ class TaskManager():
             try:
                 self.get_task_status(task_id) 
             except:
-                #print(f"get_task_table: failed at task id {task_id}")
-                pass
+                logger.debug(f"get_task_table: failed at task id {task_id}")                
             row = task_data.to_dict()
             row['task_id'] = task_id
             data.append(row)
@@ -473,19 +475,25 @@ class CheckStorageManager():
             
         # Get filtering criteria from database
         with application.app_context():
-            device = Device.query.get(device_name)
-            assert device
-            filters = device.basic_filters.all()
+            try:
+                device = Device.query.get(device_name)
+                assert device
+                filters = device.basic_filters.all()
+                logger.debug(f"found {filters} for {device}")
+            except AssertionError:
+                logger.error('device not found')
+            except Exception as e:
+                logger.error('database error')
+                logger.error(repr(e))
+                return False
         
         for f in filters:
             try:
-                value = getattr(ds, f.field)
+                value = getattr(ds, f.field)                                
                 if value == f.value:
-                    if f.mode:
-                        return False   
-                    elif not f.mode:
-                        return False                
-            except:
+                    logger.debug(f"rejected series with {f.field} == {value}")
+                    return False                   
+            except AttributeError:
                 pass
         
         # El resonador 3T tiene algunas reglas más complicadas, por ahora
@@ -501,7 +509,7 @@ class CheckStorageManager():
                 pass
             try:
                 if ((ds.SeriesDescription == '') & (ds.NumberOfSeriesRelatedInstances == 1)): return False
-            except:
+            except AttributeError:
                 pass
 
         return True

@@ -338,7 +338,6 @@ $(document).ready(function () {
                 return filter_data
             }
         ).get()
-        (filters)
         var ajax_data = {
             "device": device,
             "filters":  filters
@@ -352,6 +351,7 @@ $(document).ready(function () {
             contentType: "application/json",
             success: function(response) {                    
                 // Show success message
+                devices_table.ajax.reload()
                 alert(response.message)
             },
             error: function(xhr, status, error) {

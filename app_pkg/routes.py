@@ -1,12 +1,15 @@
-import json, ipaddress, os, psutil, logging
+import ipaddress, psutil, logging
 from datetime import datetime, timedelta
 from pydicom.multival import MultiValue
+
+from sqlalchemy.exc import OperationalError
 
 from flask import render_template, request, jsonify
 from app_pkg import application, db
 from app_pkg.aux_funcs import read_dataset, find_imgs_in_field, ping
-from services.dicom_interface import DicomInterface
 from app_pkg.db_models import Patient, Study, Series, Instance, Device, BasicFilter
+
+from services.dicom_interface import DicomInterface
 from services import task_manager, check_storage_manager, store_scp
 
 logger = logging.getLogger('__main__')
@@ -24,9 +27,13 @@ def search_studies():
     try:
         device = Device.query.get(request.json['device'])
         assert device
+        logger.info('device found on database')
     except AssertionError:
+        logger.info('device not found on database')
         return jsonify(message = "El dispositivo no existe"), 500
     except Exception as e:
+        logger.info('uknwown error when reading device from database')
+        logger.info(repr(e))
         return jsonify(message = "Error al leer la base de datos"), 500    
     
     # Parse and format study dates
@@ -67,16 +74,10 @@ def search_studies():
 
     # Send the dicom query
     device_dict = {attr:getattr(device, attr) for attr in ["ae_title","port","address"]}
-    try:
-        device = Device.query.get(request.json['device'])
-        assert device
-    except AssertionError:
-        return jsonify(message = "El dispositivo no existe"), 500
-    except Exception as e:
-        return jsonify(message = "Error al leer la base de datos"), 500  
-
     ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title)    
     responses = ae.query_studies_in_device(device_dict, qr, rs)
+    logger.debug(f'{len(responses)} studies found on {device.ae_title}')
+    
     ae.release_connections()
 
     # Extract data from datasets
@@ -94,7 +95,7 @@ def search_studies():
     data = {
         "data": full_data
     }
-    print(full_data)
+        
     return data
 
 @application.route('/local')
@@ -104,7 +105,13 @@ def local():
 @application.route('/get_local_studies', methods = ['GET','POST'])
 def get_local_studies():
 
-    studies = Study.query.all()
+    try:
+        studies = Study.query.all()
+        logger.debug(f'{len(studies)} studies found on local database')
+    except Exception as e:
+        logger.error(f'An error ocurred during database query')
+        logger.error(repr(e))
+        return jsonify(message = "An error ocurred during database query"), 500
 
     # Extract data from datasets
     full_data = []
@@ -125,14 +132,20 @@ def get_local_studies():
     data = {
         "data": full_data
     }
-    
+
     return data
 
 @application.route('/get_local_study_data', methods=['GET', 'POST'])
 def get_local_study_data():
     
-    study = Study.query.get(request.json['StudyInstanceUID'])
-
+    try:
+        study = Study.query.get(request.json['StudyInstanceUID'])
+        logger.debug(f"Study {request.json['StudyInstanceUID']} found on local database")
+    except Exception as e:
+        logger.error(f'An error ocurred during database query')
+        logger.error(repr(e))
+        return jsonify(message = "An error ocurred during database query"), 500
+    
     full_data = []
     for series in study.series.all():
         data = {
@@ -164,9 +177,11 @@ def get_study_data():
         device = Device.query.get(request.json['source'])
         assert device
     except AssertionError:
+        logger.error(f'device not found in database')        
         return jsonify(message = "El dispositivo no existe"), 500
     except Exception as e:
-        print(repr(e))
+        logger.error(f'unknown error ocurred when reading database')
+        logger.error(repr(e))
         return jsonify(message = "Error al leer la base de datos"), 500
     
     # Build the data for the dicom query
@@ -181,6 +196,7 @@ def get_study_data():
     device_dict = {attr:getattr(device, attr) for attr in ["ae_title","port","address"]}
     ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title)
     responses = ae.query_series_in_study(device_dict, request.json['StudyInstanceUID'], responses = rs)
+    logger.debug(f'{len(responses)} studies found on {device.ae_title}')
     ae.release_connections()
     
     # Extract data from datasets
@@ -203,7 +219,12 @@ def get_study_data():
 @application.route('/get_devices')
 def get_devices():
 
-    devices = Device.query.all()
+    try:
+        devices = Device.query.all()
+    except Exception as e:
+        logger.error('Unknown error ocurred when searching devices in database')
+        logger.error(repr(e))
+        return jsonify(message = "Error al leer la base de datos"), 500
 
     devices = [{"name":d.name, "ae_title":d.ae_title, "address":d.address + ":" + str(d.port),
                 "imgs_series": d.imgs_series, "imgs_study": d.imgs_study,
@@ -224,11 +245,14 @@ def find_missing_series():
 
     # Get device info from database
     try:
-        device = Device.query.get(request.json['source'])
+        device = Device.query.get(request.json['device'])
         assert device
     except AssertionError:
+        logger.error('device not found')
         return jsonify(message = "El dispositivo no existe"), 500
     except Exception as e:
+        logger.error('Unknown error ocurred when searching devices in database')
+        logger.error(repr(e))
         return jsonify(message = "Error al leer la base de datos"), 500
 
     # Parse and format study dates
@@ -305,9 +329,13 @@ def move():
         device = Device.query.get(dest)
         assert device
     except AssertionError:
+        logger.error('device not found')
         return jsonify(message = "El dispositivo no existe"), 500
     except Exception as e:
+        logger.error('uknown error when searching database')
+        logger.error(repr(e))
         return jsonify(message = "Error al leer la base de datos"), 500      
+    
     destination = device.ae_title 
 
     # Get items to send and remove repeated ones
@@ -338,20 +366,32 @@ def manage_devices():
     ae_title = request.json["ae_title"]
 
     # Query database for device
-    d = Device.query.get(device_name)
-       
+    try:
+        d = Device.query.get(device_name)
+    except OperationalError as e:
+        logger.error('SQL OperationalError')
+        logger.error(repr(e))
+        return jsonify(message = "Error al leer la base de datos"), 500    
+           
     action = request.json["action"]
     if action == "delete":
-        if not d: return {"message":"Error: el dispositivo no existe"}  
+        
         # Delete device and associated filters     
         try:   
+            assert d
             db.session.delete(d)
             for f in d.basic_filters.all():
                 db.session.delete(f)  
             db.session.commit()
-            return {"message":"Dispositivo eliminado correctamente"}
+            logger.info(f'device {d} deleted')
+            return jsonify(message = "Dispositivo eliminado correctamente"), 200
+        except AssertionError:
+            logger.error('trying to delete unexistent device')
+            return jsonify(message = "Error: el dispositivo no existe"), 500    
         except:
-            return {"message":"Error al acceder a la base de datos"}
+            logger.error('uknown error when searching database')
+            logger.error(repr(e))
+            return jsonify(message = "Error al leer la base de datos"), 500    
     
     
     # Check if IP is formatted correctly
@@ -359,6 +399,7 @@ def manage_devices():
     try:
         ipaddress.ip_address(address)
     except ValueError:
+        logger.info('IP address not formatted properly')
         return {"message":"Error: la dirección IP no es válida"}    
     
     # Check port
@@ -367,11 +408,14 @@ def manage_devices():
         assert port.isnumeric()
         port = int(port)
     except:
+        logger.info('invalid port')
         return {"message":"Error: el puerto no es válido"}    
             
     if action == "add":
         # Add new device        
-        if d: return {"message":"Error: el dispositivo ya existe"}    
+        if d:
+            logger.error('trying to create an already existent device') 
+            return jsonify(message = "Error: el dispositivo ya existe"), 500    
         try:
             # Add device to database
             new_d = Device(name = device_name, ae_title = ae_title, address = address, port = port,
@@ -379,28 +423,35 @@ def manage_devices():
             imgs_study = request.json["imgs_study"] or "Unknown")
             db.session.add(new_d)
             db.session.commit()
-            return {"message":"Dispositivo agregado correctamente"}
+            logger.info(f'device {new_d} created.') 
+            return jsonify(message = "Dispositivo creado correctamente"), 200   
         except:
-            return {"message":"Error al acceder a la base de datos"}
+            logger.error('uknown error when creating new device')
+            logger.error(repr(e))
+            return jsonify(message = "Error al crear el nuevo dispositivo"), 500  
  
     # Edit device
     elif action == "edit":
         # Check if device exists
-        if not d: return {"message":"Error: el dispositivo no existe"}   
+        if not d:
+            logger.error('trying to edit an unexistent device') 
+            return jsonify(message = "Error: el dispositivo no existe"), 500    
         
         # Edit device in database     
-        try:            
+        try:       
             d.ae_title = ae_title
             d.address = address
             d.port = port
             d.imgs_series = request.json["imgs_series"] or "Unknown"
             d.imgs_study = request.json["imgs_study"] or "Unknown"
             db.session.commit()
+            logger.info('device edited')
+            return {"message":"Dispositivo editado correctamente"}    
         except Exception as e:
+            logger.info('edit device failed')
             print(repr(e))
             return {"message":"Error al acceder a la base de datos"}
 
-        return {"message":"Dispositivo editado correctamente"}    
     
 @application.route('/query_imgs_field', methods=['GET', 'POST'])
 def query_imgs_field():

@@ -17,7 +17,6 @@ from pynetdicom.sop_class import (
     Verification
 )
 
-debug_logger()
 # Setup logging behaviour
 app_logger = logging.getLogger('__main__')
 
@@ -54,6 +53,7 @@ def default_query(level: str):
         ds.ImagesInAcquisition = ''        
 
     else:
+        app_logger.error('Level must be either "SERIES" or "STUDY"')
         raise ValueError('Level must be either "SERIES" or "STUDY"')
 
     return ds
@@ -118,7 +118,7 @@ def default_store_handler(event: Event,
             output_queue.put(output_ds)
 
         except Exception as e:
-            app_logger.error("SCP: dataset could not put in output queue")
+            app_logger.error("dataset could not put in output queue")
     
     return 0x0000 
 
@@ -177,6 +177,7 @@ class DicomInterface(AE):
 
         """                      
         if not self.port:
+            app_logger.error("Listening port must be specified before starting the StoreSCP. Set it to a int in the port attribute.")
             raise(ValueError('Listening port must be specified before starting the StoreSCP. Set it to a int in the port attribute.'))
         
         # Implement a handler for evt.EVT_C_ECHO
