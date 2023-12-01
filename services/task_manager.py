@@ -463,7 +463,7 @@ class CheckStorageManager():
             try:
                 series_in_pacs = series_in_pacs[0]
                 if not device['imgs_series'] == 'Unknown':          
-                    assert series_in_pacs[pacs['imgs_series']].value == series[device['imgs_series']].value
+                    assert series_in_pacs[pacs['imgs_series']].value >= series[device['imgs_series']].value
             except Exception as e:
                 missing_series.append(series)
         

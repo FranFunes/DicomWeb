@@ -17,7 +17,6 @@ task_manager = TaskManager()
 check_storage_manager = CheckStorageManager()
   
 # Get SCP AET and port from database or initialize it if not available
-
 aet = os.environ.get('DEFAULT_STORE_SCP_AET','DicomWeb')
 port = int(os.environ.get('DEFAULT_STORE_SCP_PORT', 11113))
 

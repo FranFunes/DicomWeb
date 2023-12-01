@@ -154,7 +154,9 @@ class DicomInterface(AE):
         self.port = port
         self.store_handler = store_handler
         self.store_scp_active = False
-        self.acse_timeout = acse_timeout
+        self.acse_timeout = 120
+        self.dimse_timeout = 120
+        self.network_timeout = 120
 
         # AE configuration
         # Requested contexts (when acting as Store SCU)

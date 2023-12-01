@@ -74,7 +74,7 @@ def search_studies():
 
     # Send the dicom query
     device_dict = {attr:getattr(device, attr) for attr in ["ae_title","port","address"]}
-    ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title)    
+    ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title, acse_timeout=120)    
     responses = ae.query_studies_in_device(device_dict, qr, rs)
     logger.debug(f'{len(responses)} studies found on {device.ae_title}')
     
@@ -194,7 +194,7 @@ def get_study_data():
           
     # Send the dicom query
     device_dict = {attr:getattr(device, attr) for attr in ["ae_title","port","address"]}
-    ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title)
+    ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title, acse_timeout=120)
     responses = ae.query_series_in_study(device_dict, request.json['StudyInstanceUID'], responses = rs)
     logger.debug(f'{len(responses)} studies found on {device.ae_title}')
     ae.release_connections()
@@ -527,7 +527,7 @@ def manage_local_device():
 @application.route('/test_local_device', methods=['GET', 'POST'])
 def test_local_device():   
 
-    ae = DicomInterface()  
+    ae = DicomInterface(acse_timeout=120)  
     try:
         # Get local device info from database
         local = Device.query.get('__local_store_SCP__')
