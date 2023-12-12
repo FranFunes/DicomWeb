@@ -215,20 +215,25 @@ class DeviceTasksHandler():
         except ValueError:
             priority = 1
         
-        # Create a handler (an iterator) to take one step on this task
-        task_step_iterator = self._create_task_step_handler(id, data)
+        # Create new task and append it to the list        
         task = {
             'data': data,
             'status': 'pending',
             'priority': priority,
-            'step': task_step_iterator,
             'progress': '-'
         }
-        
-        # Append the task to the tasks list
         self.tasks_list[id] = task
+        # Create a handler (an iterator) to take one step on this task
+        try:
+            task['step'] = self._create_task_step_handler(id, data)
+            logger.debug(f"_new_task -  Added new task with id {id} and priority {priority}")
+        except:
+            # Mark the task as failed
+            self.manage_task(id, action = 'fail')
+            
+        
+        
 
-        logger.debug(f"_new_task -  Added new task with id {id} and priority {priority}")
 
     def _create_task_step_handler(self, task_id, task_data):
 
