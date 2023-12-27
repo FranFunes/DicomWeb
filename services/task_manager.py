@@ -201,7 +201,8 @@ class DeviceTasksHandler():
             self.manage_task(task_id, action = 'complete')        
         except RuntimeError as e:
             # Set task as failed
-            self.tasks_list[task_id]['association'].release()
+            if 'association' in self.tasks_list[task_id]:
+                self.tasks_list[task_id]['association'].release()
             logger.debug(f"_task_step - runtime error")
             logger.debug(repr(e))
             self.manage_task(task_id, action = 'fail')
