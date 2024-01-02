@@ -143,6 +143,9 @@ function initMissingTable() {
         // Prevent the form from submitting normally
         event.preventDefault();
 
+        // Clear previous result messages
+        $(".storageResults").remove()
+
         // Start interval to monitor status
         var interval = setInterval(updateStatus, 1000);
         
@@ -151,7 +154,6 @@ function initMissingTable() {
             alert(`El campo imgs_series no ha sido definido para este dispositivo. 
             Se chequeará la existencia de la serie solamente`)
         }
-
         $('#storageProgress').css("width","0%");
         $('#storageProgress').toggleClass('progress-bar-animated');
         $('#findMissingBtn').prop('disabled', true);
@@ -166,13 +168,31 @@ function initMissingTable() {
         endDate = $("#endDate").val()
 
         // Retrieve new data      
-        table_studies.ajax.reload(function() {
+        table_studies.ajax.reload(function(data) {
             // Stop refreshing and update aspect
             clearInterval(interval)
             $('#storageProgress').css("width","100%")            
             $('#storageStatus').text(" ")
             $('#storageProgress').toggleClass('progress-bar-animated')
             $('#findMissingBtn').prop('disabled', false);
+
+            // Show results message
+            console.log(data.series_in_device)
+            console.log(data.missing_series)
+            console.log(data.filtered_series)
+            
+            var message = $(`<div class="col storageResults">
+                                <div class="alert alert-info alert-dismissible fade show">
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                                    <strong>${data.device}:</strong>
+                                    <br>
+                                    ${data.series_in_device} series en el dispositivo.
+                                    ${data.missing_series} series faltantes en el PACS.
+                                    ${data.filtered_series} series filtradas.
+                                </div>
+                            </div>`)
+            var title = $("h1")
+            title.parent().append(message)
 
             // Store query data locally to be shown after refreshing
             localStorage.setItem("storageTable",JSON.stringify(table_studies.rows().data().toArray()))

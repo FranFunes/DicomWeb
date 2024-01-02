@@ -443,11 +443,14 @@ class CheckStorageManager():
 
             series_in_device.extend(series_rsp)
 
+
         # Release connection with the device
         ae.release_connections()
 
         # Apply filters
+        discarded_series = list(filter(lambda x: not self.series_filter(x, device_name), series_in_device))
         series_in_device = list(filter(lambda x: self.series_filter(x, device_name), series_in_device))
+        
 
         # PACS connection
         with application.app_context():
@@ -479,7 +482,7 @@ class CheckStorageManager():
         self.status = 'Desocupado'
         self.progress = 0
 
-        return missing_series        
+        return missing_series, series_in_device, discarded_series        
     
     def series_filter(self, ds, device_name):
             

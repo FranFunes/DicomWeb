@@ -273,7 +273,7 @@ def find_missing_series():
         studydate = start_date.strftime('%Y%m%d')+'-'+end_date.strftime('%Y%m%d')
     
     # Find missing series
-    missing_series = check_storage_manager.find_missing_series(request.json['device'], studydate)
+    missing_series, series_in_device, discarded_series  = check_storage_manager.find_missing_series(request.json['device'], studydate)
 
     # Extract missing series data from datasets
     series_data = []
@@ -289,7 +289,11 @@ def find_missing_series():
         series_data.append(ds_data)        
         
     data = {
-        "data": series_data
+        "data": series_data,
+        "device": request.json['device'],   
+        "series_in_device": len(series_in_device),
+        "missing_series": len(missing_series),
+        "filtered_series": len(discarded_series)
     }
     
     return data
