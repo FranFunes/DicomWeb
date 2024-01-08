@@ -449,7 +449,7 @@ class CheckStorageManager():
 
         # Apply filters
         discarded_series = list(filter(lambda x: not self.series_filter(x, device_name), series_in_device))
-        series_in_device = list(filter(lambda x: self.series_filter(x, device_name), series_in_device))
+        series_filtered = list(filter(lambda x: self.series_filter(x, device_name), series_in_device))
         
 
         # PACS connection
@@ -459,9 +459,9 @@ class CheckStorageManager():
         # Check if each series exists in PACS with the same number of images
         self.status = 'Buscando series en el PACS...' 
         missing_series = []
-        for idx, series in enumerate(series_in_device):
+        for idx, series in enumerate(series_filtered):
             # Update progress
-            self.progress = idx / len(series_in_device)   
+            self.progress = idx / len(series_filtered)   
             
             qr = {'StudyInstanceUID': series.StudyInstanceUID, 
                 'SeriesInstanceUID': series.SeriesInstanceUID,
@@ -482,7 +482,7 @@ class CheckStorageManager():
         self.status = 'Desocupado'
         self.progress = 0
 
-        return missing_series, series_in_device, discarded_series        
+        return missing_series, series_filtered, discarded_series        
     
     def series_filter(self, ds, device_name):
             

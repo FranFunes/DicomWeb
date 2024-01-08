@@ -175,11 +175,6 @@ function initMissingTable() {
             $('#storageStatus').text(" ")
             $('#storageProgress').toggleClass('progress-bar-animated')
             $('#findMissingBtn').prop('disabled', false);
-
-            // Show results message
-            console.log(data.series_in_device)
-            console.log(data.missing_series)
-            console.log(data.filtered_series)
             
             var message = $(`<div class="col storageResults">
                                 <div class="alert alert-info alert-dismissible fade show">
