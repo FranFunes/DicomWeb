@@ -7,8 +7,13 @@ $(document).ready(function () {
         success: function(response) {                    
             // Update local device info
             $("#localAET").text(response.data.ae_title)
-            $("#localIP").text(response.data.address)
             $("#localPort").text(response.data.port)   
+            $("#localIP").text(response.data.address)
+            response.data.addresses.forEach((address) => {
+                var select = $("#localDeviceManagerAddress")
+                var option = $(`<option>${address}</option>`)
+                select.append(option)
+            })
         },
         error: function(xhr, status, error) {
             // handle error response here
@@ -51,6 +56,7 @@ $(document).ready(function () {
         // Fill form with local device info
         $('#localDeviceManagerAET').val($("#localAET").text())      
         $('#localDeviceManagerPort').val($("#localPort").text())   
+        $('#localDeviceManagerAddress').val($("#localIP").text())   
     })
 
     // Edit local device form submit
@@ -60,6 +66,7 @@ $(document).ready(function () {
         var ajax_data = {
             "ae_title":  $('#localDeviceManagerAET').val(),
             "port": parseInt($('#localDeviceManagerPort').val()),
+            "address": $("#localDeviceManagerAddress").val(),
         }
         $.ajax({
             url: "/manage_local_device",
@@ -73,6 +80,7 @@ $(document).ready(function () {
                 // Update local device info
                 $("#localAET").text(ajax_data.ae_title)
                 $("#localPort").text(ajax_data.port)
+                $("#localIP").text(ajax_data.address)
             },
             error: function(xhr, status, error) {
                 // handle error response here

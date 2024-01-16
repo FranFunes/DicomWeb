@@ -74,7 +74,9 @@ def search_studies():
 
     # Send the dicom query
     device_dict = {attr:getattr(device, attr) for attr in ["ae_title","port","address"]}
-    ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title, acse_timeout=120)    
+    ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title, 
+                        address = Device.query.get('__local_store_SCP__').address,
+                        acse_timeout=120)    
     responses = ae.query_studies_in_device(device_dict, qr, rs)
     logger.debug(f'{len(responses)} studies found on {device.ae_title}')
     
@@ -194,7 +196,9 @@ def get_study_data():
           
     # Send the dicom query
     device_dict = {attr:getattr(device, attr) for attr in ["ae_title","port","address"]}
-    ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title, acse_timeout=120)
+    ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title, 
+                        address = Device.query.get('__local_store_SCP__').address,
+                        acse_timeout=120)
     responses = ae.query_series_in_study(device_dict, request.json['StudyInstanceUID'], responses = rs)
     logger.debug(f'{len(responses)} studies found on {device.ae_title}')
     ae.release_connections()
@@ -485,8 +489,8 @@ def get_local_device():
         elif intface in stats and getattr(stats[intface], "isup"):
             [ips.append(addr.address) for addr in addr_list if addr.family.name =='AF_INET' and not addr.address=='127.0.0.1']
     
-    address = '/'.join(ips)
-    device = {'ae_title': local.ae_title, 'address': address, 'port': local.port}
+    addresses = '/'.join(ips)
+    device = {'ae_title': local.ae_title, 'address': local.address, 'addresses': ips, 'port': local.port}
 
     data = {
         "data": device
@@ -501,6 +505,7 @@ def manage_local_device():
         local = Device.query.get('__local_store_SCP__')
         local.port = request.json['port']
         local.ae_title = request.json["ae_title"]
+        local.address = request.json["address"]
     except:
         logger.error('Local device configuration could not be updated on the database')
         return jsonify(message = 'Local device configuration could not be updated on the database'), 500
@@ -508,6 +513,7 @@ def manage_local_device():
     # Keep backup values for ae title and port
     old_aet = store_scp.ae_title
     old_port = store_scp.port
+    old_address = store_scp.address
 
     # Restart DICOM interfaces
     try:
@@ -515,6 +521,7 @@ def manage_local_device():
         store_scp.stop_store_scp()
         store_scp.ae_title = request.json["ae_title"]
         store_scp.port = request.json['port']
+        store_scp.address = request.json["address"]
         store_scp.start_store_scp()
         # If succesful, commit changes to database
         db.session.commit()
@@ -524,6 +531,7 @@ def manage_local_device():
         db.session.rollback()
         store_scp.ae_title = old_aet
         store_scp.port = old_port
+        store_scp.address = old_address
         store_scp.start_store_scp()
         logger.error(repr(e))
         return jsonify(message = 'Local AET configuration could not be restarted with the selected configuration. Restoring previous values.'), 500

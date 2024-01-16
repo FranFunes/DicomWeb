@@ -408,7 +408,9 @@ class CheckStorageManager():
         
         # Start a DICOM AE to perform C-FIND operations on the device
         with application.app_context():
-            ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title)          
+            ae = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title, 
+                        address = Device.query.get('__local_store_SCP__').address,
+                        acse_timeout=120)          
 
         # Query studies and series in the target device
         self.status = 'Buscando estudios en el dispositivo...'
@@ -454,7 +456,9 @@ class CheckStorageManager():
 
         # PACS connection
         with application.app_context():
-            ae_pacs = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title)
+            ae_pacs = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title, 
+                        address = Device.query.get('__local_store_SCP__').address,
+                        acse_timeout=120) 
         
         # Check if each series exists in PACS with the same number of images
         self.status = 'Buscando series en el PACS...' 
