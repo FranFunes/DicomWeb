@@ -547,8 +547,7 @@ def test_local_device():
         logger.error('Database connection error')
         return jsonify(message = 'Local device configuration could not be read from the database'), 500
 
-    device = {attr:getattr(local,attr) for attr in ['ae_title','port']}
-    device['address'] = '127.0.0.1'    
+    device = {attr:getattr(local,attr) for attr in ['ae_title','port','address']}
     echo_response = ae.echo(device)
     if echo_response == 0:
         return jsonify(message = 'Local DICOM interface is up and running!!!'), 200
