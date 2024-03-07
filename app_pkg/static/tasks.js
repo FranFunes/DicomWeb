@@ -56,7 +56,7 @@ $(document).ready(function () {
                 tasks_table.row(element).select();                
             })
         }); 
-    }, 1000);
+    }, 5000);
 
     // Add buttons functionality
     $('.task-action').on('click', function() {
