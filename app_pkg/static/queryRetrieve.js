@@ -22,8 +22,7 @@ $(document).ready(function () {
             }
             initStudiesTable()
             initDestinations()
-        },
-            
+        },            
     });
 
     // Enable select behaviour for device table
@@ -87,7 +86,6 @@ $(document).ready(function () {
         }
 
       });
-
 });
 
 // Initialize studies table
