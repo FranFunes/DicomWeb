@@ -2,6 +2,7 @@ $(document).ready(function () {
 
     initStudiesTable()
     initDestinations()
+    initActionButtons()
 
 });
     
@@ -59,45 +60,9 @@ function initStudiesTable() {
     $('#studies tbody').on('click', 'tr', function (clickEvent) {  
               
         if (($(this).hasClass('odd') || $(this).hasClass('even')) && !clickEvent.target.classList.contains('dt-control')) {
-            $(this).toggleClass('selected toSend');            
+            $(this).toggleClass('selected');            
         }
-
-    });
-
-    // Add send button behaviour
-    $("#sendForm").submit(function(event) {
-        // Prevent the form from submitting normally
-        event.preventDefault();
-
-        // Get destination device
-        var ajax_data = {'destination': $("#destinations").val()}
-
-        // Get selected rows
-        var items = []
-        var tr = $('.toSend')        
-        for (var idx = 0; idx < tr.length; idx++){
-            var element = tr[idx]
-            items.push($(element.closest('table')).DataTable().row(element).data())                        
-        }
-        ajax_data.items = items
-        $.ajax({
-            url: "/move",
-            method: "POST",
-            data:   JSON.stringify(ajax_data),
-            dataType: "json",
-            contentType: "application/json",
-            success: function(response) {
-                
-                // Show success message
-                alert(response.message)
-            },
-            error: function(xhr, status, error) {
-                // handle error response here
-                console.log(xhr.responseText);
-            }
-            });
-
-    });
+    });    
 }
 
 function initDestinations() {
@@ -122,7 +87,7 @@ function initDestinations() {
             // handle error response here
             console.log(xhr.responseText);
         }
-        });
+    });
 }
 
 // Show study details
@@ -162,6 +127,103 @@ function showStudy(row) {
         info: false,
 });
 }
+
+function getSelectedRowsData(){
+
+    var data = []
+    var tr = $('.selected')        
+    for (var idx = 0; idx < tr.length; idx++){
+        var element = tr[idx]
+        data.push($(element.closest('table')).DataTable().row(element).data())                        
+    }
+    return data
+
+}
+
+function initActionButtons(){
+    var btns = $(".task-action");
+    btns.on('click', function() {
+        actionFunc($(this).attr('action'), getSelectedRowsData())
+    })
+}
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////           ACTION BUTTONS           //////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////
+function actionFunc(action, data){
+    if (action === 'delete' && confirm('¿Eliminar los elementos seleccionados?')){        
+        deleteStudies(data)
+    }
+    if (action === 'download') {
+        downloadStudies(data)
+    }
+    if (action === 'send') {
+        console.log('send')
+        sendStudies(data)
+    }
+}
+
+function deleteStudies(data){
+    
+    $.ajax({
+        url: "/delete_studies",
+        method: "POST",
+        data:   JSON.stringify(data),
+        dataType: "json",
+        contentType: "application/json",
+        success: function(response) {                    
+            // Show success message
+            $('#studies').DataTable().ajax.reload()
+        },
+        error: function(xhr, status, error) {
+            // handle error response here
+            alert(response.message)            
+        }
+    });    
+}
+
+function downloadStudies(data){
+    
+    $.ajax({
+        url: "/download_studies",
+        method: "POST",
+        data:   JSON.stringify(data),
+        dataType: "json",
+        contentType: "application/json",
+        success: function(response) {                    
+            // Redirect to the download URL returned by the server
+            window.location.href = 'download_zip';
+        },
+        error: function(xhr, status, error) {
+            // handle error response here
+            alert(response.message)            
+        }
+    });    
+}
+
+function sendStudies(data){
+    var ajax_data = {
+        items: data,
+        destination: $("#destinations").val()
+    }
+
+    $.ajax({
+        url: "/send",
+        method: "POST",
+        data:   JSON.stringify(ajax_data),
+        dataType: "json",
+        contentType: "application/json",
+        success: function(response) {            
+            // Show success message
+            alert(response.message)
+        },
+        error: function(xhr, status, error) {
+            // handle error response here
+            console.log(xhr.responseText);
+        }
+    });
+}
+
 
 // Escape special characters in html element id (to be usable by jQuery)
 function jq( myid ) {  

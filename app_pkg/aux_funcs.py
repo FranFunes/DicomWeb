@@ -1,4 +1,5 @@
 import subprocess, os
+from shutil import make_archive, copytree, rmtree
 from typing import List
 from datetime import datetime, timedelta
 from pydicom.dataset import Dataset
@@ -174,3 +175,21 @@ def ping(target_host, timeout = 100, count = 3):
             return False
     except subprocess.CalledProcessError as e:
         return False
+    
+
+def zip_files(items: List[dict]) -> str:
+    
+    os.makedirs('dicomtemp', exist_ok = True)
+    for item in items:
+        copytree(item.path, 'dicomtemp')
+    """
+    zip_fname = task.id + '_' + config.client_id
+    archive_name = os.path.join(config.zip_dir, zip_fname)        
+    make_archive('dicoms', 'zip', 'dicomtemp')
+
+    make_archive()
+
+    """
+
+    
+    return os.path.join('dicomtemp','dicom.zip')

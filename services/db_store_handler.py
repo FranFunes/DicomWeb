@@ -1,9 +1,11 @@
 import os, logging
+from pathlib import Path
 from datetime import datetime
 from pynetdicom.events import Event
 from pydicom.dataset import Dataset
 from app_pkg import application, db
 from app_pkg.db_models import Patient, Study, Series, Instance, Device, BasicFilter
+from typing import Union
 
 logger = logging.getLogger('__main__')
 
@@ -23,7 +25,7 @@ def db_create_patient(ds: Dataset) -> Patient:
         db.session.commit()
     return patient
 
-def db_create_study(ds: Dataset) -> Study:
+def db_create_study(ds: Dataset, path: Union[str,Path]) -> Study:
 
     uid = ds.StudyInstanceUID
     date = datetime.strptime(ds.StudyDate + ds.StudyTime[:6], '%Y%m%d%H%M%S')
@@ -39,13 +41,14 @@ def db_create_study(ds: Dataset) -> Study:
         study = Study(StudyInstanceUID = uid, 
                       StudyDate = date,
                       StudyDescription = description, 
+                      path = str(path),
                       patient = patient)
         db.session.add(study)
         db.session.commit()
 
     return study
     
-def db_create_series(ds: Dataset) -> Series:
+def db_create_series(ds: Dataset, path: Union[str,Path]) -> Series:
 
     uid = ds.SeriesInstanceUID
     date = datetime.strptime(ds.SeriesDate + ds.SeriesTime[:6], '%Y%m%d%H%M%S')
@@ -60,12 +63,13 @@ def db_create_series(ds: Dataset) -> Series:
             raise ValueError("This series already exists")
         # Check if patient and study already exist or create them if not
         patient = Patient.query.get(ds.PatientID) or db_create_patient(ds)
-        study = Study.query.get(ds.StudyInstanceUID) or db_create_study(ds)
+        study = Study.query.get(ds.StudyInstanceUID) or db_create_study(ds, Path(path).parents[0])
         series = Series(SeriesInstanceUID = uid, 
                         SeriesDate = date,
                         SeriesDescription = description, 
                         SeriesNumber = number,
                         Modality = mod, 
+                        path = str(path),
                         patient = patient,
                         study = study)
         db.session.add(series)
@@ -73,7 +77,7 @@ def db_create_series(ds: Dataset) -> Series:
         
     return series
 
-def db_create_instance(ds: Dataset, filename: str) -> Instance:
+def db_create_instance(ds: Dataset, filename: Union[str,Path]) -> Instance:
 
     uid = ds.SOPInstanceUID
     uid_class = ds.SOPClassUID
@@ -85,11 +89,11 @@ def db_create_instance(ds: Dataset, filename: str) -> Instance:
             raise ValueError("This instance already exists")
         # Check if patient, study and series already exist or create them if not
         patient = Patient.query.get(ds.PatientID) or db_create_patient(ds)
-        study = Study.query.get(ds.StudyInstanceUID) or db_create_study(ds)
-        series = Series.query.get(ds.SeriesInstanceUID) or db_create_series(ds)
+        study = Study.query.get(ds.StudyInstanceUID) or db_create_study(ds, Path(filename).parents[1])
+        series = Series.query.get(ds.SeriesInstanceUID) or db_create_series(ds, Path(filename).parents[0])
         instance = Instance(SOPInstanceUID = uid, 
                             SOPClassUID = uid_class,
-                            filename = filename,
+                            filename = str(filename),
                             patient = patient,
                             study = study,
                             series = series)

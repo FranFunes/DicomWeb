@@ -164,7 +164,8 @@ class DicomInterface(AE):
         self.add_requested_context(StudyRootQueryRetrieveInformationModelMove)
         self.add_requested_context(StudyRootQueryRetrieveInformationModelGet)  
         self.add_requested_context(Verification)
-        
+
+                
         # Add supported contexts (when acting as SCP)
         self.supported_contexts = StoragePresentationContexts
         self.add_supported_context(Verification)

@@ -6,3 +6,4 @@ app.db
 incoming
 logs
 output.log
+app_pkg/dicoms.zip

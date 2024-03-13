@@ -1,12 +1,13 @@
-import ipaddress, psutil, logging
+import ipaddress, psutil, logging, os
+from shutil import copytree, rmtree, make_archive
 from datetime import datetime, timedelta
 from pydicom.multival import MultiValue
 
 from sqlalchemy.exc import OperationalError
 
-from flask import render_template, request, jsonify
+from flask import render_template, request, jsonify, send_file
 from app_pkg import application, db
-from app_pkg.aux_funcs import read_dataset, find_imgs_in_field, ping
+from app_pkg.aux_funcs import read_dataset, find_imgs_in_field, ping, zip_files
 from app_pkg.db_models import Patient, Study, Series, Instance, Device, BasicFilter
 
 from services.dicom_interface import DicomInterface
@@ -171,6 +172,61 @@ def get_local_study_data():
     
     return data
 
+@application.route('/delete_studies', methods=['GET', 'POST'])
+def delete_studies():
+    
+    # Get items to delete (remove repeated ones)
+    items = request.json
+    studies_uids = [ds['StudyInstanceUID'] for ds in items if ds['level'] == 'STUDY']
+    items = list(filter(lambda x: not (x['level'] == 'SERIES' and x['StudyInstanceUID'] in studies_uids), items))
+
+    success = 0
+    for item in items:
+        try:
+            if item['level'] == 'STUDY':
+                element = Study.query.get(item['StudyInstanceUID'])
+            elif item['level'] == 'SERIES':
+                element = Series.query.get(item['SeriesInstanceUID'])            
+            path = element.path
+            db.session.delete(element)                
+            logger.debug(f"deleted {element}")
+            success += 1
+        except Exception as e:
+            logger.error(f"an error ocurred deleting {item}")
+            logger.error(repr(e))
+
+    try:
+        db.session.commit()     
+        rmtree(path)       
+        return jsonify(message = f"{success} deleted succesfully"), 200
+    except Exception as e:
+        logger.error(repr(e))         
+        return jsonify(message = f"error al escribir en la base de datos"), 500
+    
+@application.route('/download_studies', methods=['GET', 'POST'])
+def download_studies():
+    
+    # Get items to download
+    items = request.json
+    studies_uids = [ds['StudyInstanceUID'] for ds in items if ds['level'] == 'STUDY']
+    items = list(filter(lambda x: not (x['level'] == 'SERIES' and x['StudyInstanceUID'] in studies_uids), items))
+    
+    # Zip files
+    os.makedirs('app_pkg/dicomtemp', exist_ok=True)
+    for item in items:
+        if item['level'] == 'STUDY':
+            element = Study.query.get(item['StudyInstanceUID'])
+        elif item['level'] == 'SERIES':
+            element = Series.query.get(item['SeriesInstanceUID'])    
+        copytree(element.path, os.path.join('app_pkg/dicomtemp', os.path.basename(element.path)))
+    make_archive('app_pkg/dicoms', 'zip', 'app_pkg/dicomtemp')    
+    rmtree('app_pkg/dicomtemp')
+    return jsonify(message = "Listo para descargar"), 200
+
+@application.route('/download_zip')
+def download_zip():
+    return send_file('dicoms.zip', as_attachment = True)
+
 @application.route('/get_study_data', methods=['GET', 'POST'])
 def get_study_data():
     
@@ -333,6 +389,7 @@ def move():
     dest = request.json['destination']
     if dest == 'Local':
         dest = '__local_store_SCP__'
+
     try:
         device = Device.query.get(dest)
         assert device
@@ -350,11 +407,42 @@ def move():
     datasets = request.json['items']
     studies_uids = [ds['StudyInstanceUID'] for ds in datasets if ds['level'] == 'STUDY']
     datasets = list(filter(lambda x: not (x['level'] == 'SERIES' and x['StudyInstanceUID'] in studies_uids), datasets))
-    
+            
     # Send datasets 
     for task_data in datasets:
         task_data['destination'] = destination
         task_data['type'] = 'MOVE'
+        task_manager.manage_task(action = 'new', task_data = task_data)
+
+    return {"message": f"Se agregaron {len(datasets)} trabajos a la cola"}
+
+@application.route('/send', methods=['GET', 'POST'])
+def send():       
+    
+    # Get destination ae_title from database
+    dest = request.json['destination']
+
+    try:
+        device = Device.query.get(dest)
+        assert device
+    except AssertionError:
+        logger.error('device not found')
+        return jsonify(message = "El dispositivo no existe"), 500
+    except Exception as e:
+        logger.error('uknown error when searching database')
+        logger.error(repr(e))
+        return jsonify(message = "Error al leer la base de datos"), 500      
+
+    # Get items to send and remove repeated ones
+    datasets = request.json['items']
+    studies_uids = [ds['StudyInstanceUID'] for ds in datasets if ds['level'] == 'STUDY']
+    datasets = list(filter(lambda x: not (x['level'] == 'SERIES' and x['StudyInstanceUID'] in studies_uids), datasets))
+            
+    # Send datasets 
+    for task_data in datasets:
+        task_data['destination'] = request.json['destination']
+        task_data['type'] = 'SEND'
+        task_data['datasets'] = datasets        
         task_manager.manage_task(action = 'new', task_data = task_data)
 
     return {"message": f"Se agregaron {len(datasets)} trabajos a la cola"}

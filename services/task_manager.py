@@ -6,10 +6,11 @@ import threading, logging
 import pandas as pd
 from numpy import argmax
 from pynetdicom.sop_class import StudyRootQueryRetrieveInformationModelMove
+from pynetdicom import build_context
 from pydicom.dataset import Dataset
 
 from app_pkg import application
-from app_pkg.db_models import Device
+from app_pkg.db_models import Device, Study, Series
 from services.dicom_interface import DicomInterface
 
 logger = logging.getLogger('__main__')
@@ -231,13 +232,8 @@ class DeviceTasksHandler():
         except:
             # Mark the task as failed
             self.manage_task(id, action = 'fail')
-            
-        
-        
-
-
+       
     def _create_task_step_handler(self, task_id, task_data):
-
         if task_data['type'] == 'MOVE':
             
             # Get source from database      
@@ -282,6 +278,42 @@ class DeviceTasksHandler():
                 progress = f"{completed} / {imgs}"
                 yield progress            
         
+        elif task_data['type'] == 'SEND':
+            
+            dest = task_data['destination']
+            with application.app_context():
+                device = Device.query.get(dest)
+                destination = {attr:getattr(device, attr) for attr in ["ae_title","port","address"]}
+                
+            # Get the dicom instances to send
+            items = task_data['datasets']
+            datasets = []
+            with application.app_context():
+                for item in items:
+                    if item['level'] == 'STUDY':
+                        element = Study.query.get(item['StudyInstanceUID'])
+                    elif item['level'] == 'SERIES':
+                        element = Series.query.get(item['SeriesInstanceUID'])   
+                    instances = element.instances.all()
+                    datasets.extend(instances)
+            
+            contexts = []
+            new_uids = set([ds.SOPClassUID for ds in datasets])
+            for uid in new_uids:
+                contexts.append(build_context(uid))
+            
+            # Create association
+            association = self.ae.associate(destination['address'], destination['port'], contexts, destination['ae_title'])  
+            self.tasks_list[task_id]['association'] = association
+
+            for idx, ds in enumerate(datasets):
+                try:
+                    status = association.send_c_store(ds.filename)
+                except (ValueError, AttributeError):
+                    raise RuntimeError
+                progress = f"{idx + 1} / {len(datasets)}"
+                yield progress
+
         elif task_data['type'] == 'GET':
 
             # Not implemented yet. Use a 'dummy' progress instead
