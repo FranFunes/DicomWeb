@@ -160,7 +160,6 @@ class DicomInterface(AE):
 
         # AE configuration
         # Requested contexts (when acting as Store SCU)
-        self.requested_contexts = StoragePresentationContexts[:124]
         self.add_requested_context(StudyRootQueryRetrieveInformationModelFind)
         self.add_requested_context(StudyRootQueryRetrieveInformationModelMove)
         self.add_requested_context(StudyRootQueryRetrieveInformationModelGet)  

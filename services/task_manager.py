@@ -6,6 +6,7 @@ import threading, logging
 import pandas as pd
 from numpy import argmax
 from pynetdicom.sop_class import StudyRootQueryRetrieveInformationModelMove
+from pynetdicom import build_context
 from pydicom.dataset import Dataset
 
 from app_pkg import application
@@ -284,9 +285,6 @@ class DeviceTasksHandler():
                 device = Device.query.get(dest)
                 destination = {attr:getattr(device, attr) for attr in ["ae_title","port","address"]}
                 
-            association = self.ae.get_association(destination)
-            self.tasks_list[task_id]['association'] = association
-
             # Get the dicom instances to send
             items = task_data['datasets']
             datasets = []
@@ -296,12 +294,21 @@ class DeviceTasksHandler():
                         element = Study.query.get(item['StudyInstanceUID'])
                     elif item['level'] == 'SERIES':
                         element = Series.query.get(item['SeriesInstanceUID'])   
-                    instances = [instance.filename for instance in  element.instances.all()]
+                    instances = element.instances.all()
                     datasets.extend(instances)
             
+            contexts = []
+            new_uids = set([ds.SOPClassUID for ds in datasets])
+            for uid in new_uids:
+                contexts.append(build_context(uid))
+            
+            # Create association
+            association = self.ae.associate(destination['address'], destination['port'], contexts, destination['ae_title'])  
+            self.tasks_list[task_id]['association'] = association
+
             for idx, ds in enumerate(datasets):
                 try:
-                    status = association.send_c_store(ds)
+                    status = association.send_c_store(ds.filename)
                 except (ValueError, AttributeError):
                     raise RuntimeError
                 progress = f"{idx + 1} / {len(datasets)}"
