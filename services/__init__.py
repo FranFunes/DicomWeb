@@ -1,4 +1,4 @@
-import os, logging
+import os, logging, sys
 from sqlalchemy.exc import OperationalError
 from services.task_manager import TaskManager, CheckStorageManager
 from services.dicom_interface import DicomInterface
@@ -48,4 +48,5 @@ with application.app_context():
     # Create an Store SCP to receive DICOM objects and store them in the database
     store_scp = DicomInterface(ae_title = aet, port = port, address = address)
     store_scp.store_handler = store_handler
-    store_scp.start_store_scp()
+    if not 'shell' in sys.argv:
+        store_scp.start_store_scp()
