@@ -1,6 +1,7 @@
 import os, logging
 from app_pkg import db
 from sqlalchemy import event
+import json, re
 
 logger = logging.getLogger('__main__')
 
@@ -85,6 +86,7 @@ class Device(db.Model):
 
     # Cross-references down
     basic_filters = db.relationship('BasicFilter', backref='device', lazy='dynamic')  
+    filters = db.relationship('Filter', backref='device', lazy='dynamic')  
 
     def __repr__(self):
         return f'<Device {self.name}: {self.ae_title}@{self.address}>'
@@ -102,4 +104,64 @@ class BasicFilter(db.Model):
         return f'<Basic filter {self.field}: {self.value} for device {self.device_name}>'
     
 
+class Filter(db.Model):
 
+    id = db.Column(db.Integer(), primary_key=True)
+    conditions = db.Column(db.String(256))
+
+    # Cross-references up
+    device_name = db.Column(db.String(64), db.ForeignKey('device.name'))
+
+    def __repr__(self):
+        return f'<Advanced filter for device {self.device_name}:\n{json.dumps(json.loads(self.conditions), indent = 2)}>'
+    
+    def parse_conditions(self):
+        
+        c = json.loads(self.conditions)
+        conditions = []
+        for key, value in c.items():
+            bracket_pos = key.find('[')
+            if bracket_pos == -1:
+                fieldname = key
+                index = 0
+            else:
+                fieldname = key[:bracket_pos]
+                index = int(key[bracket_pos+1:-1])
+            match = value[0] == '='
+            conditions.append({
+                'fieldname': fieldname,
+                'index': index,             
+                'match': match,
+                'value': value[1:] if match else value[2:]
+            })
+        return conditions
+
+    def validate_conditions(self):
+
+        c = json.loads(self.conditions)
+        for key, value in c.items():
+            pattern = re.compile(r'^[A-Za-z]+(\[[1-9][0-9]*\])?$')
+            if not bool(pattern.match(key)):
+                return False
+            if not (value.startswith('=') or value.startswith('!=')):
+                return False
+        return True
+    
+    def match(self, ds):
+        
+        conds = self.parse_conditions()
+        for cond in conds:
+            try:
+                pattern = re.compile(cond['value'])
+                ds_value = str(getattr(ds, cond['fieldname']) if not cond['index'] else getattr(ds, cond['fieldname'])[cond['index'] - 1])
+                assert bool(pattern.match(ds_value)) == cond['match']
+            except AssertionError:
+                print(f"Series rejected | {cond['fieldname']}: ds_value: {ds_value} | pattern: {cond['value']} | match {cond['match']}")                
+                return False
+            except KeyError:
+                print(f"Series rejected: {cond['fieldname']} does not exist in dataset")
+                return False
+                
+        return True
+    
+                

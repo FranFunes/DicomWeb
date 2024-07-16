@@ -1,4 +1,4 @@
-import ipaddress, psutil, logging, os
+import ipaddress, psutil, logging, os, json
 from shutil import copytree, rmtree, make_archive
 from datetime import datetime, timedelta
 from pydicom.multival import MultiValue
@@ -8,7 +8,7 @@ from sqlalchemy.exc import OperationalError
 from flask import render_template, request, jsonify, send_file
 from app_pkg import application, db
 from app_pkg.aux_funcs import read_dataset, find_imgs_in_field, ping, zip_files
-from app_pkg.db_models import Patient, Study, Series, Instance, Device, BasicFilter
+from app_pkg.db_models import Patient, Study, Series, Instance, Device, BasicFilter, Filter
 
 from services.dicom_interface import DicomInterface
 from services import task_manager, check_storage_manager, store_scp
@@ -288,7 +288,8 @@ def get_devices():
 
     devices = [{"name":d.name, "ae_title":d.ae_title, "address":d.address + ":" + str(d.port),
                 "imgs_series": d.imgs_series, "imgs_study": d.imgs_study,
-                "filters": [{"field": f.field, "value":f.value} for f in d.basic_filters.all()]} 
+                "filters": [{"field": f.field, "value":f.value} for f in d.basic_filters.all()],
+                "advanced_filters" : [[key + item for key, item in json.loads(f.conditions).items()] for f in d.filters.all()]} 
                for d in devices if d.name!="__local_store_SCP__"]
     data = {
         "data": devices
@@ -678,4 +679,21 @@ def update_device_filters():
 
     return jsonify(message = 'Filters for ' + request.json['device'] + ' updated succesfully'), 200  
 
+@application.route('/update_device_filters_2', methods=['GET', 'POST'])
+def update_device_filters_2():   
+
+    d = Device.query.get(request.json['device'])
+
+    # Delete existent filters
+    for f in d.filters.all():
+        db.session.delete(f)
     
+    
+    # Append new filters to device
+    for filter_data in request.json['filters']:        
+        f = Filter(conditions = json.dumps(filter_data), device = d)
+        if f.validate_conditions():
+            db.session.add(f)
+    db.session.commit()    
+
+    return jsonify(message = 'Filters for ' + request.json['device'] + ' updated succesfully'), 200  

@@ -48,5 +48,5 @@ with application.app_context():
     # Create an Store SCP to receive DICOM objects and store them in the database
     store_scp = DicomInterface(ae_title = aet, port = port, address = address)
     store_scp.store_handler = store_handler
-    if not 'shell' in sys.argv:
+    if not 'shell' in sys.argv and not 'db' in sys.argv:
         store_scp.start_store_scp()
