@@ -85,23 +85,10 @@ class Device(db.Model):
     imgs_study = db.Column(db.String(64))
 
     # Cross-references down
-    basic_filters = db.relationship('BasicFilter', backref='device', lazy='dynamic')  
-    filters = db.relationship('Filter', backref='device', lazy='dynamic')  
+    filters = db.relationship('Filter', backref='device', lazy='dynamic', cascade='all, delete-orphan')  
 
     def __repr__(self):
         return f'<Device {self.name}: {self.ae_title}@{self.address}>'
-
-class BasicFilter(db.Model):
-
-    id = db.Column(db.Integer(), primary_key=True)
-    field = db.Column(db.String(64), index=True)
-    value = db.Column(db.String(64), index=True)
-
-    # Cross-references up
-    device_name = db.Column(db.String(64), db.ForeignKey('device.name'))
-
-    def __repr__(self):
-        return f'<Basic filter {self.field}: {self.value} for device {self.device_name}>'
     
 
 class Filter(db.Model):
@@ -110,7 +97,7 @@ class Filter(db.Model):
     conditions = db.Column(db.String(256))
 
     # Cross-references up
-    device_name = db.Column(db.String(64), db.ForeignKey('device.name'))
+    device_name = db.Column(db.String(64), db.ForeignKey('device.name'), )
 
     def __repr__(self):
         return f'<Advanced filter for device {self.device_name}:\n{json.dumps(json.loads(self.conditions), indent = 2)}>'

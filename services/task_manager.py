@@ -465,7 +465,7 @@ class CheckStorageManager():
 
             # Query series in this study
             series_rsp = ae.query_series_in_study(device, study.StudyInstanceUID, responses = rs)
-            
+                        
             # Add study information
             for series in series_rsp:
                 for field in ['PatientName','PatientID','StudyDescription','StudyInstanceUID','StudyDate','StudyTime']:
@@ -476,7 +476,6 @@ class CheckStorageManager():
                     setattr(series, field, value)
 
             series_in_device.extend(series_rsp)
-
 
         # Release connection with the device
         ae.release_connections()
@@ -536,14 +535,14 @@ class CheckStorageManager():
                 logger.error(repr(e))
                 return False
         
+        if not filters:
+            return True
+        
         for f in filters:
             if f.match(ds):
-                logger.debug(f"""Filter {json.dumps(json.loads(f.conditions), indent = 2)} matched for 
-                             SeriesDescription: {ds.SeriesDescription} and PatientName:{ds.PatientName}""")
                 return True
         return False
-        
-    
+            
     def series_filter_old(self, ds, device_name):
             
         # Get filtering criteria from database

@@ -4,7 +4,7 @@ from datetime import datetime
 from pynetdicom.events import Event
 from pydicom.dataset import Dataset
 from app_pkg import application, db
-from app_pkg.db_models import Patient, Study, Series, Instance, Device, BasicFilter
+from app_pkg.db_models import Patient, Study, Series, Instance
 from typing import Union
 
 logger = logging.getLogger('__main__')
