@@ -157,7 +157,7 @@ class Filter(db.Model):
                 assert bool(pattern.match(ds_value)) == cond['match']
             except AssertionError:                
                 return False
-            except AttributeError:
+            except (AttributeError, IndexError):
                 if cond['match']:
                     logger.debug(f"{cond['fieldname']} does not exist in dataset")
                     return False
