@@ -1,7 +1,7 @@
 from time import sleep
 from datetime import datetime
 from queue import Queue
-import threading, logging
+import threading, logging, json
 
 import pandas as pd
 from numpy import argmax
@@ -521,6 +521,30 @@ class CheckStorageManager():
         return missing_series, series_filtered, discarded_series        
     
     def series_filter(self, ds, device_name):
+            
+        # Get filtering criteria from database
+        with application.app_context():
+            try:
+                device = Device.query.get(device_name)
+                assert device
+                filters = device.filters.all()
+                logger.debug(f"found {filters} for {device}")
+            except AssertionError:
+                logger.error('device not found')
+            except Exception as e:
+                logger.error('database error')
+                logger.error(repr(e))
+                return False
+        
+        for f in filters:
+            if f.match(ds):
+                logger.debug(f"""Filter {json.dumps(json.loads(f.conditions), indent = 2)} matched for 
+                             SeriesDescription: {ds.SeriesDescription} and PatientName:{ds.PatientName}""")
+                return True
+        return False
+        
+    
+    def series_filter_old(self, ds, device_name):
             
         # Get filtering criteria from database
         with application.app_context():

@@ -155,12 +155,12 @@ class Filter(db.Model):
                 pattern = re.compile(cond['value'])
                 ds_value = str(getattr(ds, cond['fieldname']) if not cond['index'] else getattr(ds, cond['fieldname'])[cond['index'] - 1])
                 assert bool(pattern.match(ds_value)) == cond['match']
-            except AssertionError:
-                print(f"Series rejected | {cond['fieldname']}: ds_value: {ds_value} | pattern: {cond['value']} | match {cond['match']}")                
+            except AssertionError:                
                 return False
-            except KeyError:
-                print(f"Series rejected: {cond['fieldname']} does not exist in dataset")
-                return False
+            except AttributeError:
+                if cond['match']:
+                    logger.debug(f"{cond['fieldname']} does not exist in dataset")
+                    return False
                 
         return True
     
