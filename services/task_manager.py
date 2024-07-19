@@ -481,7 +481,7 @@ class CheckStorageManager():
         ae.release_connections()
 
         # Apply filters
-        discarded_series = list(filter(lambda x: not self.series_filter(x, device_name), series_in_device))
+        ignored_series = list(filter(lambda x: not self.series_filter(x, device_name), series_in_device))
         series_filtered = list(filter(lambda x: self.series_filter(x, device_name), series_in_device))
         
 
@@ -494,6 +494,7 @@ class CheckStorageManager():
         # Check if each series exists in PACS with the same number of images
         self.status = 'Buscando series en el PACS...' 
         missing_series = []
+        archived_series = []
         for idx, series in enumerate(series_filtered):
             # Update progress
             self.progress = idx / len(series_filtered)   
@@ -508,6 +509,7 @@ class CheckStorageManager():
                 series_in_pacs = series_in_pacs[0]
                 if not device['imgs_series'] == 'Unknown':          
                     assert series_in_pacs[pacs['imgs_series']].value >= series[device['imgs_series']].value
+                archived_series.append(series)
             except Exception as e:
                 missing_series.append(series)
         
@@ -517,7 +519,7 @@ class CheckStorageManager():
         self.status = 'Desocupado'
         self.progress = 0
 
-        return missing_series, series_filtered, discarded_series        
+        return missing_series, archived_series, ignored_series        
     
     def series_filter(self, ds, device_name):
             

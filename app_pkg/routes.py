@@ -333,10 +333,10 @@ def find_missing_series():
         studydate = start_date.strftime('%Y%m%d')+'-'+end_date.strftime('%Y%m%d')
     
     # Find missing series
-    missing_series, series_filtered, discarded_series = check_storage_manager.find_missing_series(request.json['device'], studydate)
+    missing_series, archived_series, ignored_series = check_storage_manager.find_missing_series(request.json['device'], studydate)
 
     # Extract missing series data from datasets
-    series_data = []
+    missing_series_data = []
     for ds in missing_series:
         ds_data = read_dataset(ds, ['PatientName','PatientID',
                                     'StudyDescription','StudyInstanceUID','StudyDate','StudyTime',
@@ -346,14 +346,39 @@ def find_missing_series():
                                     fields_handlers = {'PatientName': lambda x: str(x.value)})
         ds_data['source'] = request.json['device']
         ds_data['level'] = 'SERIES'
-        series_data.append(ds_data)        
+        missing_series_data.append(ds_data)   
+
+    # Extract filtered series data from datasets
+    ignored_series_data = []
+    for ds in ignored_series:
+        ds_data = read_dataset(ds, ['PatientName','PatientID',
+                                    'StudyDescription','StudyInstanceUID','StudyDate','StudyTime',
+                                    'SeriesTime','SeriesNumber','Modality','SeriesDescription',device.imgs_series,'SeriesInstanceUID'],
+                                    field_names = {device.imgs_series:'ImgsSeries'}, 
+                                    default_value = '',
+                                    fields_handlers = {'PatientName': lambda x: str(x.value)})
+        ds_data['source'] = request.json['device']
+        ds_data['level'] = 'SERIES'
+        ignored_series_data.append(ds_data)   
+
+    # Extract filtered series data from datasets
+    archived_series_data = []
+    for ds in archived_series:
+        ds_data = read_dataset(ds, ['PatientName','PatientID',
+                                    'StudyDescription','StudyInstanceUID','StudyDate','StudyTime',
+                                    'SeriesTime','SeriesNumber','Modality','SeriesDescription',device.imgs_series,'SeriesInstanceUID'],
+                                    field_names = {device.imgs_series:'ImgsSeries'}, 
+                                    default_value = '',
+                                    fields_handlers = {'PatientName': lambda x: str(x.value)})
+        ds_data['source'] = request.json['device']
+        ds_data['level'] = 'SERIES'
+        archived_series_data.append(ds_data) 
         
     data = {
-        "data": series_data,
-        "device": request.json['device'],   
-        "series_in_device": len(series_filtered) + len(discarded_series),
-        "missing_series": len(missing_series),
-        "filtered_series": len(discarded_series)
+        "data": missing_series_data,
+        "ignored_series_data": ignored_series_data,
+        "archived_series_data": archived_series_data,
+        "device": request.json['device'],
     }
     
     return data

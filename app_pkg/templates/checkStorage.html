@@ -100,14 +100,40 @@
                     </div>
                 </div>
             </form>    
-        </div>
-                
+        </div>                
         <hr>
-
+        
         <div class="pt-3">
-            <table id="missing" class="display compact nowrap" style="width:100%">
+            <ul class="nav nav-tabs nav-fill" role="tablist">
+                <li class="nav-item text-center">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#missing-series-tab">Series Faltantes</a>
+                </li>
+                <li class="nav-item text-center">
+                    <a class="nav-link" data-bs-toggle="tab" href="#ignored-series-tab">Series Ignoradas</a>
+                </li>
+                <li class="nav-item text-center">
+                    <a class="nav-link" data-bs-toggle="tab" href="#archived-series-tab">Series Archivadas</a>
+                </li>
+            </ul>
+
+            <!-- Tab panes -->
+            <div class="tab-content">
+                <div id="missing-series-tab" class="tab-pane active"><br>                              
+                    <table id="missing" class="display compact nowrap smallrows" style="width:100%">
                 
-            </table>
+                    </table>
+                </div>
+                <div id="ignored-series-tab" class="tab-pane fade"><br>                              
+                    <table id="ignored" class="display compact nowrap smallrows" style="width:100%">
+                
+                    </table>
+                </div>
+                <div id="archived-series-tab" class="tab-pane fade"><br>                              
+                    <table id="archived" class="display compact nowrap smallrows" style="width:100%">
+                
+                    </table>
+                </div>
+            </div>            
         </div>
         <hr>
         <div class="row pt-3">
