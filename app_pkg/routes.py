@@ -278,7 +278,7 @@ def get_study_data():
 
 @application.route('/get_devices')
 def get_devices():
-
+    
     try:
         devices = Device.query.all()
     except Exception as e:
@@ -302,7 +302,8 @@ def check_storage():
 
 @application.route('/find_missing_series', methods = ['GET','POST'])
 def find_missing_series():
-
+        
+    
     # Get device info from database
     try:
         device = Device.query.get(request.json['device'])
@@ -336,6 +337,9 @@ def find_missing_series():
     missing_series, archived_series, ignored_series = check_storage_manager.find_missing_series(request.json['device'], studydate)
 
     # Extract missing series data from datasets
+    source = request.json['device']
+    if source == 'CLOUDPACS':
+        source = 'PACS'
     missing_series_data = []
     for ds in missing_series:
         ds_data = read_dataset(ds, ['PatientName','PatientID',
@@ -344,7 +348,7 @@ def find_missing_series():
                                     field_names = {device.imgs_series:'ImgsSeries'}, 
                                     default_value = '',
                                     fields_handlers = {'PatientName': lambda x: str(x.value)})
-        ds_data['source'] = request.json['device']
+        ds_data['source'] = source
         ds_data['level'] = 'SERIES'
         missing_series_data.append(ds_data)   
 
@@ -357,7 +361,7 @@ def find_missing_series():
                                     field_names = {device.imgs_series:'ImgsSeries'}, 
                                     default_value = '',
                                     fields_handlers = {'PatientName': lambda x: str(x.value)})
-        ds_data['source'] = request.json['device']
+        ds_data['source'] = source
         ds_data['level'] = 'SERIES'
         ignored_series_data.append(ds_data)   
 
@@ -370,7 +374,7 @@ def find_missing_series():
                                     field_names = {device.imgs_series:'ImgsSeries'}, 
                                     default_value = '',
                                     fields_handlers = {'PatientName': lambda x: str(x.value)})
-        ds_data['source'] = request.json['device']
+        ds_data['source'] = source
         ds_data['level'] = 'SERIES'
         archived_series_data.append(ds_data) 
         

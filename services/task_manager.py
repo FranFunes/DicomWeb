@@ -424,11 +424,15 @@ class CheckStorageManager():
     def find_missing_series(self, device_name, studydate):
 
         with application.app_context():
-            device = Device.query.get(device_name)
-            pacs = Device.query.get('PACS')
-        assert device  
-        device = {attr:getattr(device, attr) for attr in ["ae_title","port","address","imgs_study","imgs_series"]}
-        pacs = {attr:getattr(pacs, attr) for attr in ["ae_title","port","address","imgs_study","imgs_series"]}
+            if device_name == 'CLOUDPACS':
+                source = Device.query.get('PACS')
+                target = Device.query.get(device_name)
+            else:
+                source = Device.query.get(device_name)
+                target = Device.query.get('PACS')
+
+        device = {attr:getattr(source, attr) for attr in ["ae_title","port","address","imgs_study","imgs_series"]}
+        pacs = {attr:getattr(target, attr) for attr in ["ae_title","port","address","imgs_study","imgs_series"]}
 
         # Build the data for the dicom query
         qr = {'StudyDate':  studydate}        
@@ -445,7 +449,7 @@ class CheckStorageManager():
                         acse_timeout=120)          
 
         # Query studies and series in the target device
-        self.status = 'Buscando estudios en el dispositivo...'
+        self.status = f'Buscando estudios en {source.name}...'
         studies = ae.query_studies_in_device(device, qr, rs)
 
         # Get series for each study
@@ -457,24 +461,21 @@ class CheckStorageManager():
             device['imgs_series']: ''}
         
         # Search series in the device
-        self.status = 'Buscando series en el dispositivo...'
+        self.status = f'Buscando series en {source.name}...'
         series_in_device = []        
         for idx, study in enumerate(studies):
             # Update progress
             self.progress = idx / len(studies)      
-
             # Query series in this study
-            series_rsp = ae.query_series_in_study(device, study.StudyInstanceUID, responses = rs)
-                        
+            series_rsp = ae.query_series_in_study(device, study.StudyInstanceUID, responses = rs)                        
             # Add study information
             for series in series_rsp:
-                for field in ['PatientName','PatientID','StudyDescription','StudyInstanceUID','StudyDate','StudyTime']:
+                for field in ['PatientName','PatientID','StudyDescription','StudyInstanceUID','StudyDate','StudyTime','ModalitiesInStudy']:
                     try:
                         value = getattr(study, field)
                     except:
                         value = ''
                     setattr(series, field, value)
-
             series_in_device.extend(series_rsp)
 
         # Release connection with the device
@@ -484,7 +485,6 @@ class CheckStorageManager():
         ignored_series = list(filter(lambda x: not self.series_filter(x, device_name), series_in_device))
         series_filtered = list(filter(lambda x: self.series_filter(x, device_name), series_in_device))
         
-
         # PACS connection
         with application.app_context():
             ae_pacs = DicomInterface(ae_title = Device.query.get('__local_store_SCP__').ae_title, 
@@ -492,7 +492,7 @@ class CheckStorageManager():
                         acse_timeout=120) 
         
         # Check if each series exists in PACS with the same number of images
-        self.status = 'Buscando series en el PACS...' 
+        self.status = f'Buscando series en {target.name}...' 
         missing_series = []
         archived_series = []
         for idx, series in enumerate(series_filtered):
@@ -544,46 +544,3 @@ class CheckStorageManager():
             if f.match(ds):
                 return True
         return False
-            
-    def series_filter_old(self, ds, device_name):
-            
-        # Get filtering criteria from database
-        with application.app_context():
-            try:
-                device = Device.query.get(device_name)
-                assert device
-                filters = device.basic_filters.all()
-                logger.debug(f"found {filters} for {device}")
-            except AssertionError:
-                logger.error('device not found')
-            except Exception as e:
-                logger.error('database error')
-                logger.error(repr(e))
-                return False
-        
-        for f in filters:
-            try:
-                value = getattr(ds, f.field)                                
-                if value == f.value:
-                    logger.debug(f"rejected series with {f.field} == {value}")
-                    return False                   
-            except AttributeError:
-                pass
-        
-        # El resonador 3T tiene algunas reglas más complicadas, por ahora
-        # van a mano        
-        if device_name == 'RESO 3T':
-            try:
-                if ds.NumberOfSeriesRelatedInstances == 0: return False
-            except:
-                pass
-            try:
-                if ((ds.SeriesNumber == '0') & (ds.NumberOfSeriesRelatedInstances == 1)): return False
-            except:
-                pass
-            try:
-                if ((ds.SeriesDescription == '') & (ds.NumberOfSeriesRelatedInstances == 1)): return False
-            except AttributeError:
-                pass
-
-        return True
