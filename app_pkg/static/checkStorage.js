@@ -26,6 +26,8 @@ $(document).ready(function () {
             }
             initDestinations()
             initMissingTable()
+            initIgnoredTable()
+            initArchivedTable()
             
         }          
     });
@@ -76,8 +78,32 @@ $(document).ready(function () {
 
     // Disable progress bar smooth transition
     $('#storageProgress').css({transition: "width 0s ease 0s"})
+
+    // Adjust DataTable width after switching tabs or opening modals
+    $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function(e){
+        $($.fn.dataTable.tables(true)).DataTable()
+           .columns.adjust();
+     });
+
+     $("#orderModal").on('shown.bs.modal', function () {
+        $($.fn.dataTable.tables(true)).DataTable()
+           .columns.adjust();
+    }); 
     
 });
+
+function initDestinations() {
+    // Append PACS
+    $('#destinations').append($('<option>', { 'PACS' : 'PACS' }).text('PACS'));
+    // Append local device
+    $('#destinations').append($('<option>', { 'Local' : 'Local' }).text('Local'));
+    var selectValues = $('#devices').DataTable().column(0).data()
+    $.each(selectValues, function(key, value) {
+        $('#destinations')
+             .append($('<option>', { value : value })
+             .text(value));
+   });
+}
 
 // Initialize missing series table
 function initMissingTable() {
@@ -131,8 +157,8 @@ function initMissingTable() {
             // Change ajax target
             table_studies.ajax.url('/find_missing_series')
             // Initialize table with data stored locally
-            if (localStorage.getItem('storageTable') !== null) {
-                data = JSON.parse(localStorage.getItem('storageTable'))
+            if (localStorage.getItem('missingTable') !== null) {
+                data = JSON.parse(localStorage.getItem('missingTable'))
                 table_studies.rows.add(data).draw()                
             }
         }
@@ -144,7 +170,7 @@ function initMissingTable() {
         event.preventDefault();
 
         // Clear previous result messages
-        $(".storageResults").remove()
+        $(".badge").remove()
 
         // Start interval to monitor status
         var interval = setInterval(updateStatus, 1000);
@@ -158,8 +184,10 @@ function initMissingTable() {
         $('#storageProgress').toggleClass('progress-bar-animated');
         $('#findMissingBtn').prop('disabled', true);
 
-        // Clear table, update ajax url 
-        table_studies.clear().draw()
+        // Clear tables
+        $('#missing').DataTable().clear().draw()
+        $('#ignored').DataTable().clear().draw()
+        $('#archived').DataTable().clear().draw()
 
         //Store the query data to be shown after refreshing the page
         sourceDevice = devices_table.rows({ selected: true })[0]
@@ -176,21 +204,27 @@ function initMissingTable() {
             $('#storageProgress').toggleClass('progress-bar-animated')
             $('#findMissingBtn').prop('disabled', false);
             
-            var message = $(`<div class="col storageResults">
-                                <div class="alert alert-info alert-dismissible fade show">
-                                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                                    <strong>${data.device}:</strong>
-                                    <br>
-                                    ${data.series_in_device} series en el dispositivo.
-                                    ${data.missing_series} series faltantes en el PACS.
-                                    ${data.filtered_series} series filtradas.
-                                </div>
-                            </div>`)
-            var title = $("h1")
-            title.parent().append(message)
+            // Show results as badges for each pane
+            var targetElement = $("a[href='#missing-series-tab']");
+            var badge = $(`<span class="badge bg-primary rounded-pill">${data.data.length}</span>`)
+            targetElement.append(badge)
 
+            var targetElement = $("a[href='#ignored-series-tab']");
+            var badge = $(`<span class="badge bg-primary rounded-pill">${data.ignored_series_data.length}</span>`)
+            targetElement.append(badge)
+
+            var targetElement = $("a[href='#archived-series-tab']");
+            var badge = $(`<span class="badge bg-primary rounded-pill">${data.archived_series_data.length}</span>`)
+            targetElement.append(badge)
+
+            // Update ignored and archived tables
+            $('#ignored').DataTable().rows.add(data.ignored_series_data).draw()
+            $('#archived').DataTable().rows.add(data.archived_series_data).draw()
+            
             // Store query data locally to be shown after refreshing
-            localStorage.setItem("storageTable",JSON.stringify(table_studies.rows().data().toArray()))
+            localStorage.setItem("missingTable",JSON.stringify(data.data))
+            localStorage.setItem("ignoredTable",JSON.stringify(data.ignored_series_data))
+            localStorage.setItem("archivedTable",JSON.stringify(data.archived_series_data))
             localStorage.setItem("storageDevice", sourceDevice)
             localStorage.setItem("storageDateSelector", dateSelector)
             localStorage.setItem("storageStartDate", startDate)
@@ -225,22 +259,104 @@ function initMissingTable() {
                 console.log(xhr.responseText);
             }
             });
-
     });
 }
 
-function initDestinations() {
-    // Append PACS
-    $('#destinations').append($('<option>', { 'PACS' : 'PACS' }).text('PACS'));
-    // Append local device
-    $('#destinations').append($('<option>', { 'Local' : 'Local' }).text('Local'));
-    var selectValues = $('#devices').DataTable().column(0).data()
-    $.each(selectValues, function(key, value) {
-        $('#destinations')
-             .append($('<option>', { value : value })
-             .text(value));
-   });
+function initIgnoredTable() {
+    var table_filtered = $('#ignored').DataTable({
+        ajax: {
+            url: "/empty_table",
+            method: "POST",
+            contentType: 'application/json',
+            dataType: "json"
+          },              
+        columns: [           
+            { data: 'source', title: 'Dispositivo' }, 
+            { data: 'PatientName', title: 'Paciente' },
+            { data: 'PatientID', title: 'ID' },
+            { data: 'StudyDate', title: 'Fecha' , type: 'date'},
+            { data: 'SeriesTime', title: 'Hora' },
+            { data: 'StudyDescription', title: 'Estudio' },
+            { data: 'Modality', title: 'Modalidad' },
+            { data: 'SeriesDescription', title: 'Serie' },
+            { data: 'SeriesNumber', title: 'Numero' },
+            { data: 'ImgsSeries', title: 'Imgs' }
+        ],
+        order: [[0, 'asc'], [3, 'asc'],[4, 'asc']],
+        language: {
+            search: 'Buscar',
+            url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json',
+            emptyTable: " ",
+            processing: " ",
+        },
+        processing: true,  
+        paging: false,
+        scrollY: '500px',
+        scrollX: true,
+        filter: false,
+        select: {
+            style: 'os',
+            selector: 'td',
+            info: false,
+        },
+        initComplete: function() {
+            // Initialize table with locally stored data
+            if (localStorage.getItem('ignoredTable') !== null) {
+                data = JSON.parse(localStorage.getItem('ignoredTable'))
+                table_filtered.rows.add(data).draw()                
+            }
+        }
+    });
 }
+
+function initArchivedTable() {
+    var table_filtered = $('#archived').DataTable({
+        ajax: {
+            url: "/empty_table",
+            method: "POST",
+            contentType: 'application/json',
+            dataType: "json"
+          },              
+        columns: [           
+            { data: 'source', title: 'Dispositivo' }, 
+            { data: 'PatientName', title: 'Paciente' },
+            { data: 'PatientID', title: 'ID' },
+            { data: 'StudyDate', title: 'Fecha' , type: 'date'},
+            { data: 'SeriesTime', title: 'Hora' },
+            { data: 'StudyDescription', title: 'Estudio' },
+            { data: 'Modality', title: 'Modalidad' },
+            { data: 'SeriesDescription', title: 'Serie' },
+            { data: 'SeriesNumber', title: 'Numero' },
+            { data: 'ImgsSeries', title: 'Imgs' }
+        ],
+        order: [[0, 'asc'], [3, 'asc'],[4, 'asc']],
+        language: {
+            search: 'Buscar',
+            url: 'https://cdn.datatables.net/plug-ins/1.11.5/i18n/es-ES.json',
+            emptyTable: " ",
+            processing: " ",
+        },
+        processing: true,  
+        paging: false,
+        scrollY: '500px',
+        scrollX: true,
+        filter: false,
+        select: {
+            style: 'os',
+            selector: 'td',
+            info: false,
+        },
+        initComplete: function() {
+            // Initialize table with locally stored data
+            if (localStorage.getItem('archivedTable') !== null) {
+                data = JSON.parse(localStorage.getItem('archivedTable'))
+                table_filtered.rows.add(data).draw()                
+            }
+        }
+    });
+}
+
+
 
 // Refresh status
 function updateStatus () {
@@ -259,6 +375,8 @@ function updateStatus () {
         }
         });
 }
+
+
 
 // Escape special characters in html element id (to be usable by jQuery)
 function jq( myid ) {  

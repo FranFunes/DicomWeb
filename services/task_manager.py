@@ -1,7 +1,7 @@
 from time import sleep
 from datetime import datetime
 from queue import Queue
-import threading, logging
+import threading, logging, json
 
 import pandas as pd
 from numpy import argmax
@@ -465,7 +465,7 @@ class CheckStorageManager():
 
             # Query series in this study
             series_rsp = ae.query_series_in_study(device, study.StudyInstanceUID, responses = rs)
-            
+                        
             # Add study information
             for series in series_rsp:
                 for field in ['PatientName','PatientID','StudyDescription','StudyInstanceUID','StudyDate','StudyTime']:
@@ -477,12 +477,11 @@ class CheckStorageManager():
 
             series_in_device.extend(series_rsp)
 
-
         # Release connection with the device
         ae.release_connections()
 
         # Apply filters
-        discarded_series = list(filter(lambda x: not self.series_filter(x, device_name), series_in_device))
+        ignored_series = list(filter(lambda x: not self.series_filter(x, device_name), series_in_device))
         series_filtered = list(filter(lambda x: self.series_filter(x, device_name), series_in_device))
         
 
@@ -495,6 +494,7 @@ class CheckStorageManager():
         # Check if each series exists in PACS with the same number of images
         self.status = 'Buscando series en el PACS...' 
         missing_series = []
+        archived_series = []
         for idx, series in enumerate(series_filtered):
             # Update progress
             self.progress = idx / len(series_filtered)   
@@ -509,6 +509,7 @@ class CheckStorageManager():
                 series_in_pacs = series_in_pacs[0]
                 if not device['imgs_series'] == 'Unknown':          
                     assert series_in_pacs[pacs['imgs_series']].value >= series[device['imgs_series']].value
+                archived_series.append(series)
             except Exception as e:
                 missing_series.append(series)
         
@@ -518,9 +519,33 @@ class CheckStorageManager():
         self.status = 'Desocupado'
         self.progress = 0
 
-        return missing_series, series_filtered, discarded_series        
+        return missing_series, archived_series, ignored_series        
     
     def series_filter(self, ds, device_name):
+            
+        # Get filtering criteria from database
+        with application.app_context():
+            try:
+                device = Device.query.get(device_name)
+                assert device
+                filters = device.filters.all()
+                logger.debug(f"found {filters} for {device}")
+            except AssertionError:
+                logger.error('device not found')
+            except Exception as e:
+                logger.error('database error')
+                logger.error(repr(e))
+                return False
+        
+        if not filters:
+            return True
+        
+        for f in filters:
+            if f.match(ds):
+                return True
+        return False
+            
+    def series_filter_old(self, ds, device_name):
             
         # Get filtering criteria from database
         with application.app_context():

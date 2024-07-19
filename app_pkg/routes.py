@@ -1,4 +1,4 @@
-import ipaddress, psutil, logging, os
+import ipaddress, psutil, logging, os, json
 from shutil import copytree, rmtree, make_archive
 from datetime import datetime, timedelta
 from pydicom.multival import MultiValue
@@ -8,7 +8,7 @@ from sqlalchemy.exc import OperationalError
 from flask import render_template, request, jsonify, send_file
 from app_pkg import application, db
 from app_pkg.aux_funcs import read_dataset, find_imgs_in_field, ping, zip_files
-from app_pkg.db_models import Patient, Study, Series, Instance, Device, BasicFilter
+from app_pkg.db_models import Study, Series, Device, Filter
 
 from services.dicom_interface import DicomInterface
 from services import task_manager, check_storage_manager, store_scp
@@ -287,8 +287,8 @@ def get_devices():
         return jsonify(message = "Error al leer la base de datos"), 500
 
     devices = [{"name":d.name, "ae_title":d.ae_title, "address":d.address + ":" + str(d.port),
-                "imgs_series": d.imgs_series, "imgs_study": d.imgs_study,
-                "filters": [{"field": f.field, "value":f.value} for f in d.basic_filters.all()]} 
+                "imgs_series": d.imgs_series, "imgs_study": d.imgs_study,                
+                "filters" : [[key + item for key, item in json.loads(f.conditions).items()] for f in d.filters.all()]} 
                for d in devices if d.name!="__local_store_SCP__"]
     data = {
         "data": devices
@@ -333,10 +333,10 @@ def find_missing_series():
         studydate = start_date.strftime('%Y%m%d')+'-'+end_date.strftime('%Y%m%d')
     
     # Find missing series
-    missing_series, series_filtered, discarded_series    = check_storage_manager.find_missing_series(request.json['device'], studydate)
+    missing_series, archived_series, ignored_series = check_storage_manager.find_missing_series(request.json['device'], studydate)
 
     # Extract missing series data from datasets
-    series_data = []
+    missing_series_data = []
     for ds in missing_series:
         ds_data = read_dataset(ds, ['PatientName','PatientID',
                                     'StudyDescription','StudyInstanceUID','StudyDate','StudyTime',
@@ -346,14 +346,39 @@ def find_missing_series():
                                     fields_handlers = {'PatientName': lambda x: str(x.value)})
         ds_data['source'] = request.json['device']
         ds_data['level'] = 'SERIES'
-        series_data.append(ds_data)        
+        missing_series_data.append(ds_data)   
+
+    # Extract filtered series data from datasets
+    ignored_series_data = []
+    for ds in ignored_series:
+        ds_data = read_dataset(ds, ['PatientName','PatientID',
+                                    'StudyDescription','StudyInstanceUID','StudyDate','StudyTime',
+                                    'SeriesTime','SeriesNumber','Modality','SeriesDescription',device.imgs_series,'SeriesInstanceUID'],
+                                    field_names = {device.imgs_series:'ImgsSeries'}, 
+                                    default_value = '',
+                                    fields_handlers = {'PatientName': lambda x: str(x.value)})
+        ds_data['source'] = request.json['device']
+        ds_data['level'] = 'SERIES'
+        ignored_series_data.append(ds_data)   
+
+    # Extract filtered series data from datasets
+    archived_series_data = []
+    for ds in archived_series:
+        ds_data = read_dataset(ds, ['PatientName','PatientID',
+                                    'StudyDescription','StudyInstanceUID','StudyDate','StudyTime',
+                                    'SeriesTime','SeriesNumber','Modality','SeriesDescription',device.imgs_series,'SeriesInstanceUID'],
+                                    field_names = {device.imgs_series:'ImgsSeries'}, 
+                                    default_value = '',
+                                    fields_handlers = {'PatientName': lambda x: str(x.value)})
+        ds_data['source'] = request.json['device']
+        ds_data['level'] = 'SERIES'
+        archived_series_data.append(ds_data) 
         
     data = {
-        "data": series_data,
-        "device": request.json['device'],   
-        "series_in_device": len(series_filtered) + len(discarded_series),
-        "missing_series": len(missing_series),
-        "filtered_series": len(discarded_series)
+        "data": missing_series_data,
+        "ignored_series_data": ignored_series_data,
+        "archived_series_data": archived_series_data,
+        "device": request.json['device'],
     }
     
     return data
@@ -472,12 +497,10 @@ def manage_devices():
     action = request.json["action"]
     if action == "delete":
         
-        # Delete device and associated filters     
+        # Delete device 
         try:   
             assert d
             db.session.delete(d)
-            for f in d.basic_filters.all():
-                db.session.delete(f)  
             db.session.commit()
             logger.info(f'device {d} deleted')
             return jsonify(message = "Dispositivo eliminado correctamente"), 200
@@ -666,16 +689,14 @@ def update_device_filters():
     d = Device.query.get(request.json['device'])
 
     # Delete existent filters
-    for f in d.basic_filters.all():
+    for f in d.filters.all():
         db.session.delete(f)
-    
-    # Append new filters to device
-    for filter_data in request.json['filters']:
-        f = BasicFilter(field = filter_data['field'], value = filter_data['value'], device = d)
-        db.session.add(f)
 
-    db.session.commit()
+    # Append new filters to device
+    for filter_data in request.json['filters']:        
+        f = Filter(conditions = json.dumps(filter_data), device = d)
+        if f.validate_conditions():
+            db.session.add(f)
+    db.session.commit()    
 
     return jsonify(message = 'Filters for ' + request.json['device'] + ' updated succesfully'), 200  
-
-    

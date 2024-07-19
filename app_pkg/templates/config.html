@@ -125,31 +125,14 @@
             
                     <!-- Modal body -->
                     <div class="modal-body">
-                        <ul class="nav nav-tabs" role="tablist">
-                            <li class="nav-item">
-                              <a class="nav-link active" data-bs-toggle="tab" href="#filters-basic">Básico</a>
-                            </li>
-                            <li class="nav-item">
-                              <a class="nav-link" data-bs-toggle="tab" href="#filters-advanced">Avanzado</a>
-                            </li>
-                          </ul>
-                        
-                          <!-- Tab panes -->
-                          <div class="tab-content">
-                            <div id="filters-basic" class="tab-pane active"><br>                              
-                                <form id="editBasicFiltersForm">                                                                        
-                                    <div class="d-grid mb-3">
-                                        <button type="button" class="btn btn-primary btn-block btn-sm" id="newBasicFilterBtn">Nuevo filtro</button>
-                                    </div>      
-                                    <div class="modal-footer">
-                                        <button type="submit" id="editBasicFiltersSubmit" class="btn btn-danger" data-bs-dismiss="modal">Send</button>
-                                    </div>
-                                </form>
-                            </div>
-                            <div id="filters-advanced" class="tab-pane fade"><br>                              
-                              <p>No implementado</p>
-                            </div>
-                          </div>
+                        <div id="filters">                              
+                        <div class="d-grid mb-3">
+                            <button type="button" class="btn btn-primary btn-block btn-sm" id="newFilterBtn">Nuevo filtro</button>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" id="editFiltersSubmit" class="btn btn-danger" data-bs-dismiss="modal">Send</button>
+                        </div> 
+                    </div>
                     </div>
                 </div>
             </div>

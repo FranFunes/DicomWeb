@@ -25,7 +25,7 @@ with application.app_context():
     try:
         d = Device.query.get('__local_store_SCP__')                
         assert d
-        logger.info('local device found in the database')
+        logger.debug('local device found in the database')
         aet = d.ae_title
         port = d.port
         address = d.address
@@ -48,5 +48,5 @@ with application.app_context():
     # Create an Store SCP to receive DICOM objects and store them in the database
     store_scp = DicomInterface(ae_title = aet, port = port, address = address)
     store_scp.store_handler = store_handler
-    if not 'shell' in sys.argv:
+    if 'flask' in sys.argv and 'run' in sys.argv:
         store_scp.start_store_scp()
