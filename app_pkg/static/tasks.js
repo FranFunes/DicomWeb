@@ -44,19 +44,28 @@ $(document).ready(function () {
                             selector: 'td',
                             info: false,
                         },
+        initComplete: function () {
+            setTimeout(refreshTable, 1000) 
+        }
     });
-    
-    // Auto refresh, keeping selected rows
-    setInterval( function () {
+
+    // Auto refresh, keeping selected rows and scrolling position
+    function refreshTable() {
+        
         var selectedRows = tasks_table.rows({ selected: true });
         var idx = selectedRows[0];
-               
-        tasks_table.ajax.reload( function() {
+    
+        var scrollingContainer = $(tasks_table.table().node()).parent('div.dataTables_scrollBody');
+        var scrollTop = scrollingContainer.scrollTop();
+        
+        tasks_table.ajax.reload(function () {            
             idx.forEach(function(element) {
                 tasks_table.row(element).select();                
             })
-        }); 
-    }, 10000);
+            scrollingContainer.scrollTop(scrollTop);
+            setTimeout(refreshTable, 2000)    
+        });
+    }
 
     // Add buttons functionality
     $('.task-action').on('click', function() {

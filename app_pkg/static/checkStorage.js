@@ -356,8 +356,6 @@ function initArchivedTable() {
     });
 }
 
-
-
 // Refresh status
 function updateStatus () {
     $.ajax({
@@ -375,8 +373,6 @@ function updateStatus () {
         }
         });
 }
-
-
 
 // Escape special characters in html element id (to be usable by jQuery)
 function jq( myid ) {  
