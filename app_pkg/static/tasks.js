@@ -10,7 +10,7 @@ $(document).ready(function () {
             { data: 'PatientName', title: 'Paciente' }, 
             { data: 'StudyDate', title: 'Fecha', type: 'date' }, 
             { data: 'description', title: 'Descripcion' },
-            { data: 'modality', title: 'Modalidad' },
+            { data: 'modality', title: 'Serie' },
             { data: 'SeriesNumber', title: 'Numero' },
             { data: 'source', title: 'Origen' },
             { data: 'destination', title: 'Destino' },
@@ -56,7 +56,7 @@ $(document).ready(function () {
                 tasks_table.row(element).select();                
             })
         }); 
-    }, 5000);
+    }, 10000);
 
     // Add buttons functionality
     $('.task-action').on('click', function() {
