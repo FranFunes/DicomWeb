@@ -44,9 +44,7 @@ $(document).ready(function () {
                             selector: 'td',
                             info: false,
                         },
-        initComplete: function () {
-            setTimeout(refreshTable, 1000) 
-        }
+        initComplete: refreshTable
     });
 
     // Auto refresh, keeping selected rows and scrolling position
