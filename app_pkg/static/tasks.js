@@ -1,5 +1,21 @@
 $(document).ready(function () {
 
+    // Calculate the scrollY height
+    function calculateScrollY() {
+        var windowHeight = $(window).height();
+        var footerHeight = $('footer').outerHeight() || 0; // Footer height
+        var tableOffsetTop = $('#tasks').offset().top || 0; // Table's top position
+
+        // Calculate the scrollY value        
+        var scrollY = windowHeight - footerHeight - (tableOffsetTop - $(window).scrollTop());        
+        scrollY = scrollY - 80
+        return scrollY + 'px';
+    }
+
+    var scrollTop = 0;
+    var scrollingContainer;
+    var selectedRows = null;
+
     var tasks_table = $('#tasks').DataTable({
         ajax: "/get_tasks_table", 
         columns: [
@@ -44,24 +60,30 @@ $(document).ready(function () {
                             selector: 'td',
                             info: false,
                         },
-        initComplete: refreshTable
+        initComplete: function () {
+            
+            // Keep track of scrolling position for table refresh
+            scrollingContainer = $(tasks_table.table().node()).parent('div.dataTables_scrollBody');
+            scrollingContainer.on('scroll', function() {
+                scrollTop = scrollingContainer.scrollTop();
+            });
+
+            // Add click event for row selection
+            tasks_table.on( 'select', function () {
+                selectedRows = tasks_table.rows({'selected':true})[0]
+            });
+            refreshTable()
+        }
     });
 
     // Auto refresh, keeping selected rows and scrolling position
     function refreshTable() {
-        
-        var selectedRows = tasks_table.rows({ selected: true });
-        var idx = selectedRows[0];
-    
-        var scrollingContainer = $(tasks_table.table().node()).parent('div.dataTables_scrollBody');
-        var scrollTop = scrollingContainer.scrollTop();
-        
-        tasks_table.ajax.reload(function () {            
-            idx.forEach(function(element) {
-                tasks_table.row(element).select();                
-            })
+        tasks_table.ajax.reload(function () {
+            if (selectedRows !== null) {
+                tasks_table.rows(selectedRows).select();
+            }
             scrollingContainer.scrollTop(scrollTop);
-            setTimeout(refreshTable, 2000)    
+            setTimeout(refreshTable, 2000);
         });
     }
 

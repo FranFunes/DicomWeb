@@ -146,7 +146,12 @@ function initStudiesTable() {
                 data = JSON.parse(localStorage.getItem('studiesTable'))
                 table_studies.rows.add(data).draw()                
             }
-        }
+        },
+        select:         {
+                            style: 'os',
+                            selector: 'td',
+                            info: false,
+                        },
     });
 
     // Manage the study search (form submission)
@@ -190,15 +195,6 @@ function initStudiesTable() {
             tr.addClass('shown');
         }
     });  
-    
-    // Add row selection behaviour
-    $('#studies tbody').on('click', 'tr', function (clickEvent) {  
-              
-        if (($(this).hasClass('odd') || $(this).hasClass('even')) && !clickEvent.target.classList.contains('dt-control')) {
-            $(this).toggleClass('selected toSend');            
-        }
-
-    });
 
     // Add send button behaviour
     $("#sendForm").submit(function(event) {
@@ -283,6 +279,11 @@ function showStudy(row) {
         paging: false,
         filter: false,
         info: false,
+        select:         {
+                            style: 'os',
+                            selector: 'td',
+                            info: false,
+                        },
 });
 }
 
