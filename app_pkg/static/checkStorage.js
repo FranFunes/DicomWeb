@@ -10,7 +10,7 @@ $(document).ready(function () {
         ],
         searching: false,
         paging: false,
-        ordering: false,
+        ordering: true,
         info: false,
         initComplete: function() {
             

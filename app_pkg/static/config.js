@@ -31,7 +31,7 @@ $(document).ready(function () {
         ],
         searching: false,
         paging: false,
-        ordering: false,
+        ordering: true,
         info: false,
         language: {
             "emptyTable": "No peer devices configured"

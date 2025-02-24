@@ -206,7 +206,7 @@ function initStudiesTable() {
 
         // Get selected rows
         var items = []
-        var tr = $('.toSend')        
+        var tr = $('#studies').find('tr.selected')        
         for (var idx = 0; idx < tr.length; idx++){
             var element = tr[idx]
             items.push($(element.closest('table')).DataTable().row(element).data())                        
@@ -227,7 +227,7 @@ function initStudiesTable() {
                 // handle error response here
                 console.log(xhr.responseText);
             }
-            });
+        });
 
     });
 }

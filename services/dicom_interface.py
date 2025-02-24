@@ -199,7 +199,8 @@ class DicomInterface(AE):
     def stop_store_scp(self) -> None:
         
         """ Stops the SCP """
-        self.server.shutdown()
+        if hasattr(self,'server'):
+            self.server.shutdown()
         self.store_scp_active = False
         app_logger.debug("Store SCP stopped")
 
