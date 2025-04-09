@@ -9,7 +9,8 @@ from app_pkg import application
 from app_pkg.db_models import Device
 from services.dicom_interface import DicomInterface
 
-def read_dataset(ds:Dataset, fields_to_read:List[str], field_names:dict = {}, default_value = None,
+def read_dataset(ds:Dataset, fields_to_read:List[str], field_names:dict = {},
+                 default_values = {}, fallback_value = None,
                  fields_handlers:dict = {}, format_datetimes = True):
     """
     
@@ -17,7 +18,8 @@ def read_dataset(ds:Dataset, fields_to_read:List[str], field_names:dict = {}, de
     · ds: pydicom.Dataset where the data is to be extracted from
     · fields_to_read: a list of strings with standard dicom field names to extract
     · field_names(opt): a dict with a mapping from a standard dicom field name to a custom name to use in the output dictionary.
-    · default_value: value to assign when field is not in dataset
+    · default_value: a mapping with values to assign when field is not in dataset
+    · fallback_value: a value to assign to fields not present in the dataset and not in the default_values mapping.
     · fields_handlers (opt): a dict with a field names as keys and function handlers as elements, to allow custom control of
     how each field is read. By default, the value extracted is ds[fieldname].value
     · format_datetimes (opt): if True (default), date and time fields will be parsed to the dd/mm/yyyy and hh:mm:ss format. (This
@@ -49,7 +51,11 @@ def read_dataset(ds:Dataset, fields_to_read:List[str], field_names:dict = {}, de
                                 pass
 
         except:
-            value = default_value
+            if field in default_values:
+                value = default_values[field]
+            else:
+                value = fallback_value
+
         if field in field_names:
             name = field_names[field]
         else:

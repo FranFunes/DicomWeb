@@ -322,6 +322,8 @@ $(document).ready(function () {
         $("#filters").find('.filter').remove()
         // Fill form with selected device info
         data = devices_table.rows({ selected: true }).data()[0]        
+        // Fill modal title
+        $("#filteredDevice").text(data.name)
         // Show existent filters       
         data.filters.forEach(function(conditions) {            
             element = createFilter(conditions)
