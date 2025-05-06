@@ -1,6 +1,6 @@
 from queue import Queue
 from typing import List, Union, Callable
-import logging, os
+import logging, os, traceback
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
@@ -11,6 +11,7 @@ from pynetdicom import AE, evt, StoragePresentationContexts, build_role, build_c
 from pynetdicom.association import Association
 from pynetdicom.events import Event
 from pynetdicom.sop_class import (
+    PatientRootQueryRetrieveInformationModelFind,
     StudyRootQueryRetrieveInformationModelFind,
     StudyRootQueryRetrieveInformationModelMove,
     StudyRootQueryRetrieveInformationModelGet,
@@ -160,6 +161,7 @@ class DicomInterface(AE):
 
         # AE configuration
         # Requested contexts (when acting as Store SCU)
+        self.add_requested_context(PatientRootQueryRetrieveInformationModelFind)
         self.add_requested_context(StudyRootQueryRetrieveInformationModelFind)
         self.add_requested_context(StudyRootQueryRetrieveInformationModelMove)
         self.add_requested_context(StudyRootQueryRetrieveInformationModelGet)  
@@ -292,6 +294,10 @@ class DicomInterface(AE):
         except RuntimeError:      
             app_logger.debug(f"DicomInterface - query_device: Association with {device['ae_title']}@{device['address']}:{device['port']} is not stablished")
             query_results = []
+        except Exception as e:
+            app_logger.error(traceback.format_exc())
+            query_results = []
+
 
         # Format the output
         responses = []
