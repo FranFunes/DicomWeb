@@ -113,12 +113,12 @@ class DeviceTasksHandler():
         
         if action == 'new':
             self._new_task(id, modifier['data'])
-            logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
+            #logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
         elif action == 'pause':
             if self.tasks_list[id]['status'] in ['active','pending']:
                 logger.debug(f"_modify_task - Paused task with id {id}")
                 self.tasks_list[id]['status'] = 'paused'
-                logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
+                #logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
                 
         elif action == 'continue':
             if self.tasks_list[id]['status'] == 'paused':
@@ -131,31 +131,31 @@ class DeviceTasksHandler():
             task_data = self.tasks_list[id]['data']
             self.tasks_list.pop(id)  
             self._new_task(id, task_data)            
-            logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
+            #logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
             
         elif action == 'rush':
             if not self.tasks_list[id]['status'] in ['completed','failed']:
                 logger.debug(f"_modify_task - Rush task with id {id}")
                 current_priorities = [task['priority'] for task in self.tasks_list.values()]
                 self.tasks_list[id]['priority'] = max(current_priorities) + 1                
-                logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
+                #logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
 
         elif action == 'delete':
             if 'association' in self.tasks_list[id]:
                 self.tasks_list[id]['association'].release()
             self.tasks_list.pop(id)
             logger.debug(f"_modify_task - Delete task with id {id}")
-            logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
+            #logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
 
         elif action == 'complete':
             logger.debug(f"_modify_task - Completed task with id {id}")            
             self.tasks_list[id]['status'] = 'completed'
-            logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
+            #logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
 
         elif action == 'fail':
             logger.debug(f"_modify_task - Failed task with id {id}")
             self.tasks_list[id]['status'] = 'failed'
-            logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
+            #logger.debug(f"_modify_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")
     
     def _next_task(self):
         
@@ -177,7 +177,7 @@ class DeviceTasksHandler():
                     self.tasks_list[self.current_task_id]['status'] = 'pending'                
                 logger.debug(f"_next_task - Changing task {next_task_id} to active")
                 self.tasks_list[next_task_id]['status'] = 'active'           
-                logger.debug(f"_next_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")            
+                #logger.debug(f"_next_task - Tasks status: {[(id, task['status'], task['priority']) for id,task in self.tasks_list.items()]}")            
                 self.current_task_id = next_task_id        
 
     def _task_step(self, task_id):

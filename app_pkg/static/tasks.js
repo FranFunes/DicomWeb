@@ -53,8 +53,9 @@ $(document).ready(function () {
         processing:     false,
         paging:         false,
         scrollX:        true,  
-        searching:      false,
-        info:           false,
+        scrollY:        '500px',
+        searching:      true,
+        info:           true,
         select:         {
                             style: 'os',
                             selector: 'td',

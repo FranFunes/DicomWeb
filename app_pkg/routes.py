@@ -90,7 +90,8 @@ def search_studies():
         data = read_dataset(study, ['PatientName','PatientID','StudyDate','StudyTime','ModalitiesInStudy','StudyDescription',device.imgs_study,'StudyInstanceUID'],
                              field_names = {device.imgs_study:'ImgsStudy'},
                              fields_handlers = {'PatientName': lambda x: str(x.value),
-                                                'ModalitiesInStudy': lambda x: '/'.join(x.value) if type(x.value) == MultiValue else x.value})  
+                                                'ModalitiesInStudy': lambda x: '/'.join(x.value) if type(x.value) == MultiValue else x.value},
+                             default_values={'StudyDescription':''})  
         
         data['source'] = request.json['device']
         data['level'] = 'STUDY'
@@ -264,7 +265,7 @@ def get_study_data():
     for series in responses:
         data = read_dataset(series, ['SeriesNumber','SeriesDate','SeriesTime','Modality','SeriesDescription',device.imgs_series,'SeriesInstanceUID'],
                             field_names = {device.imgs_series:'ImgsSeries'},
-                             default_value = '')
+                            fallback_value = '')
         # Add study data
         data.update(request.json)         
         data['level'] = 'SERIES'
@@ -346,7 +347,7 @@ def find_missing_series():
                                     'StudyDescription','StudyInstanceUID','StudyDate','StudyTime',
                                     'SeriesTime','SeriesNumber','Modality','SeriesDescription',device.imgs_series,'SeriesInstanceUID'],
                                     field_names = {device.imgs_series:'ImgsSeries'}, 
-                                    default_value = '',
+                                    fallback_value = '',
                                     fields_handlers = {'PatientName': lambda x: str(x.value)})
         ds_data['source'] = source
         ds_data['level'] = 'SERIES'
@@ -359,7 +360,7 @@ def find_missing_series():
                                     'StudyDescription','StudyInstanceUID','StudyDate','StudyTime',
                                     'SeriesTime','SeriesNumber','Modality','SeriesDescription',device.imgs_series,'SeriesInstanceUID'],
                                     field_names = {device.imgs_series:'ImgsSeries'}, 
-                                    default_value = '',
+                                    fallback_value = '',
                                     fields_handlers = {'PatientName': lambda x: str(x.value)})
         ds_data['source'] = source
         ds_data['level'] = 'SERIES'
@@ -372,7 +373,7 @@ def find_missing_series():
                                     'StudyDescription','StudyInstanceUID','StudyDate','StudyTime',
                                     'SeriesTime','SeriesNumber','Modality','SeriesDescription',device.imgs_series,'SeriesInstanceUID'],
                                     field_names = {device.imgs_series:'ImgsSeries'}, 
-                                    default_value = '',
+                                    fallback_value = '',
                                     fields_handlers = {'PatientName': lambda x: str(x.value)})
         ds_data['source'] = source
         ds_data['level'] = 'SERIES'

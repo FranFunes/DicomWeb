@@ -218,8 +218,7 @@ function initStudiesTable() {
             data:   JSON.stringify(ajax_data),
             dataType: "json",
             contentType: "application/json",
-            success: function(response) {
-                
+            success: function(response) {                
                 // Show success message
                 alert(response.message)
             },
