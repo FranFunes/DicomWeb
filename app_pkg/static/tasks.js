@@ -41,8 +41,11 @@ $(document).ready(function () {
             processing: " ",
         }, 
         rowCallback: function(row, data, index) {
-          if (data.status == "completed") {
+            let [completed, total] = parseIntExpression(data.progress);
+          if (data.status == "completed" & completed > 0 & completed >= total) {
             $("td:eq(0)", row).css('background-color','#8FD548');
+          } else if (data.status == "completed" & (completed < total | completed == 0)) {
+            $("td:eq(0)", row).css('background-color','#f5ea51');
           } else if (data.status == "failed") {
             $("td:eq(0)", row).css('background-color','#E23636');
           } else if (data.status == "active") {
@@ -106,3 +109,10 @@ $(document).ready(function () {
 
 // Don't show alerts on ajax errors
 $.fn.dataTable.ext.errMode = 'throw';
+
+function parseIntExpression(expr) {
+    const parts = expr.split('/').map(p => p.trim());
+    const completed = parts[0] ? parseInt(parts[0], 10) : 0;
+    const total = parts[1] ? parseInt(parts[1], 10) : 0;
+    return [completed, total];
+  }
