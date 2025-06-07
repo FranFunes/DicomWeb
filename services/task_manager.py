@@ -353,7 +353,7 @@ class TaskManager():
         row = {col: task_data.get(col, '') for col in columns}
         row['started'] = datetime.now().strftime('%H:%M:%S')
         row['status'] = 'pending'
-        row['progress'] = 0
+        row['progress'] = '-'
         row['imgs'] = task_data['ImgsStudy'] if task_data['level'] == 'STUDY' else task_data['ImgsSeries']
         row['description'] = task_data['StudyDescription'] if task_data['level'] == 'STUDY' else task_data['StudyDescription'] + ' / ' + task_data['SeriesDescription']
         row['modality'] = task_data['ModalitiesInStudy'] if task_data['level'] == 'STUDY' else task_data['SeriesDescription']
@@ -424,7 +424,7 @@ class CheckStorageManager():
     def find_missing_series(self, device_name, studydate):
 
         with application.app_context():
-            if device_name == 'CLOUDPACS':
+            if 'CLOUDPACS' in device_name:
                 source = Device.query.get('PACS')
                 target = Device.query.get(device_name)
             else:

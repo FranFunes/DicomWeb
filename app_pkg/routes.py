@@ -339,7 +339,7 @@ def find_missing_series():
 
     # Extract missing series data from datasets
     source = request.json['device']
-    if source == 'CLOUDPACS':
+    if 'CLOUDPACS' in source:
         source = 'PACS'
     missing_series_data = []
     for ds in missing_series:
