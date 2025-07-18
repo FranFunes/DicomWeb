@@ -1,0 +1,1 @@
+docker container run -d --rm -p 5000:5000 -p 4006:4006 -v $PWD/db:/home/app/db -v $PWD/logs:/home/app/logs --env-file .env --name dicomweb dicom-app:latest

@@ -1,0 +1,1 @@
+docker image build -t dicom-app:latest .

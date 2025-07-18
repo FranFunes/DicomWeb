@@ -143,10 +143,13 @@ class Filter(db.Model):
                 ds_value = str(getattr(ds, cond['fieldname']) if not cond['index'] else getattr(ds, cond['fieldname'])[cond['index'] - 1])
                 assert bool(pattern.match(ds_value)) == cond['match']
             except AssertionError:                
+                logger.debug(f"{cond['fieldname']}={ds_value} is excluded by condition {cond['value']}")
                 return False
             except (AttributeError, IndexError):
                 if cond['match']:
-                    logger.debug(f"{cond['fieldname']} does not exist in dataset")
+                    logger.debug(f"{cond['fieldname']} (length {len(cond['fieldname'])}) does not exist in series {ds.SeriesInstanceUID}")
+                    logger.debug(f"Modality: {ds.Modality}")
+                    logger.debug(repr(ds))
                     return False
                 
         return True

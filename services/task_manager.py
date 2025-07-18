@@ -458,6 +458,7 @@ class CheckStorageManager():
             'SeriesTime': '',
             'SeriesDescription': '',
             'Modality':'',
+            'PresentationIntentType':'',
             device['imgs_series']: ''}
         
         # Search series in the device
