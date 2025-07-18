@@ -458,7 +458,6 @@ class CheckStorageManager():
             'SeriesTime': '',
             'SeriesDescription': '',
             'Modality':'',
-            'PresentationIntentType':'',
             device['imgs_series']: ''}
         
         # Search series in the device
@@ -478,7 +477,7 @@ class CheckStorageManager():
                         value = ''
                     setattr(series, field, value)
             series_in_device.extend(series_rsp)
-
+        
         # Release connection with the device
         ae.release_connections()
 

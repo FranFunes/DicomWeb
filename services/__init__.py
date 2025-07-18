@@ -48,5 +48,6 @@ with application.app_context():
     # Create an Store SCP to receive DICOM objects and store them in the database
     store_scp = DicomInterface(ae_title = aet, port = port, address = address)
     store_scp.store_handler = store_handler
-    if 'flask' in sys.argv and 'run' in sys.argv:
+    if 'flask' in sys.argv[0] and 'run' in sys.argv:
+        logger.info('starting store_scp.') 
         store_scp.start_store_scp()

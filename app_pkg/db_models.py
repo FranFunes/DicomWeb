@@ -147,9 +147,7 @@ class Filter(db.Model):
                 return False
             except (AttributeError, IndexError):
                 if cond['match']:
-                    logger.debug(f"{cond['fieldname']} (length {len(cond['fieldname'])}) does not exist in series {ds.SeriesInstanceUID}")
-                    logger.debug(f"Modality: {ds.Modality}")
-                    logger.debug(repr(ds))
+                    logger.debug(f"{cond['fieldname']} does not exist in series {ds.SeriesInstanceUID}")
                     return False
                 
         return True
