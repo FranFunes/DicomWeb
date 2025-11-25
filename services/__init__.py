@@ -1,4 +1,7 @@
-import os, logging, sys
+import os
+import logging
+import sys
+import traceback
 from sqlalchemy.exc import OperationalError
 from services.task_manager import TaskManager, CheckStorageManager
 from services.dicom_interface import DicomInterface
@@ -50,4 +53,8 @@ with application.app_context():
     store_scp.store_handler = store_handler
     if 'flask' in sys.argv[0] and 'run' in sys.argv:
         logger.info('starting store_scp.') 
-        store_scp.start_store_scp()
+        try:
+            store_scp.start_store_scp()
+        except:
+            logger.error('cant start StoreSCP')
+            logger.error(traceback.format_exc())
